@@ -2,6 +2,10 @@ import magic
 import PyPDF2
 from urllib.parse import urlparse
 import requests
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 def process_file(filepath):
     file_type = magic.from_file(filepath, mime=True)
@@ -24,18 +28,26 @@ def process_url(url):
         raise ValueError(f"Unsupported URL: {url}")
 
 def process_pdf(filepath):
-    with open(filepath, 'rb') as file:
-        reader = PyPDF2.PdfReader(file)
-        num_pages = len(reader.pages)
-        text_content = []
-        for i in range(num_pages):
-            page = reader.pages[i]
-            text_content.append(page.extract_text())
-    return {
-        'type': 'pdf',
-        'num_slides': num_pages,
-        'content': text_content
-    }
+    logger.debug(f"Starting to process PDF file: {filepath}")
+    try:
+        with open(filepath, 'rb') as file:
+            reader = PyPDF2.PdfReader(file)
+            num_pages = len(reader.pages)
+            logger.debug(f"Number of pages in PDF: {num_pages}")
+            text_content = []
+            for i in range(num_pages):
+                logger.debug(f"Processing page {i+1}")
+                page = reader.pages[i]
+                text_content.append(page.extract_text())
+        logger.debug("PDF processing completed successfully")
+        return {
+            'type': 'pdf',
+            'num_slides': num_pages,
+            'content': text_content
+        }
+    except Exception as e:
+        logger.error(f"Error processing PDF file: {str(e)}")
+        raise
 
 def process_powerpoint(filepath):
     # This is a placeholder. In a real implementation, you'd use a library like python-pptx
