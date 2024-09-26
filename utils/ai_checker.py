@@ -9,30 +9,14 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
-OPENAI_ORG_ID = os.environ.get("OPENAI_ORG_ID")
-OPENAI_PROJECT_ID = os.environ.get("OPENAI_PROJECT_ID")
 
 logger.debug(f"Initializing OpenAI client with API key: {'[REDACTED]' if OPENAI_API_KEY else 'Not set'}")
-logger.debug(f"Using organization: {OPENAI_ORG_ID if OPENAI_ORG_ID else 'Default'}")
-logger.debug(f"Using project: {OPENAI_PROJECT_ID if OPENAI_PROJECT_ID else 'Default'}")
 
-if not OPENAI_API_KEY:
+if OPENAI_API_KEY:
+    openai_client = OpenAI(api_key=OPENAI_API_KEY)
+else:
     logger.warning("OPENAI_API_KEY is not set. AI checks will be skipped.")
     openai_client = None
-else:
-    if OPENAI_ORG_ID and OPENAI_PROJECT_ID:
-        openai_client = OpenAI(
-            api_key=OPENAI_API_KEY,
-            organization=OPENAI_ORG_ID,
-            project=OPENAI_PROJECT_ID
-        )
-    elif OPENAI_ORG_ID:
-        openai_client = OpenAI(
-            api_key=OPENAI_API_KEY,
-            organization=OPENAI_ORG_ID
-        )
-    else:
-        openai_client = OpenAI(api_key=OPENAI_API_KEY)
 
 def check_openai_connection():
     prompt = "This is a test connection. Please respond with 'Connected'."
