@@ -17,7 +17,13 @@ document.addEventListener('DOMContentLoaded', function() {
             return response.json();
         })
         .then(data => {
+            if (!data || (Array.isArray(data) && data.length === 0)) {
+                throw new Error('Empty or invalid JSON response');
+            }
             resultsDiv.innerHTML = '';
+            if (data.error) {
+                throw new Error(data.error);
+            }
             data.forEach(result => {
                 const resultItem = document.createElement('div');
                 resultItem.classList.add('result-item');
@@ -32,13 +38,7 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(error => {
             console.error('Error:', error);
-            return error.response ? error.response.text() : 'Unknown error occurred';
-        })
-        .then(errorText => {
-            if (errorText) {
-                console.error('Error response:', errorText);
-                resultsDiv.innerHTML = '<p>An error occurred while processing your request. Please check the console for more details.</p>';
-            }
+            resultsDiv.innerHTML = `<p>An error occurred while processing your request: ${error.message}</p>`;
         });
     });
 });

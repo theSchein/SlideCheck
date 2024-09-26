@@ -1,6 +1,6 @@
 import os
 import logging
-from flask import Flask, render_template, request, jsonify, make_response
+from flask import Flask, render_template, request, jsonify
 from flask_wtf import FlaskForm
 from wtforms import FileField, StringField, SubmitField
 from wtforms.validators import DataRequired, URL
@@ -25,8 +25,8 @@ class SlideForm(FlaskForm):
 def index():
     form = SlideForm()
     if form.validate_on_submit():
-        logger.debug("Form submitted successfully")
         try:
+            logger.debug("Form submitted successfully")
             if form.file.data:
                 logger.debug("Processing uploaded file")
                 filename = secure_filename(form.file.data.filename)
@@ -41,7 +41,7 @@ def index():
                 logger.debug("URL processing completed")
             else:
                 logger.warning("No file or URL provided")
-                return make_response(jsonify({'error': 'No file or URL provided'}), 400)
+                return jsonify({'error': 'No file or URL provided'}), 400
 
             logger.debug("Running deterministic checks")
             deterministic_results = run_deterministic_checks(slide_data)
@@ -54,23 +54,17 @@ def index():
             results = deterministic_results + ai_results
             logger.debug(f"Validation complete. Results: {results}")
             
-            response = make_response(jsonify(results))
-            response.headers['Content-Type'] = 'application/json'
-            return response
+            return jsonify(results)
         except Exception as e:
             logger.error(f"Error during processing: {str(e)}", exc_info=True)
-            error_response = make_response(jsonify({'error': str(e)}), 500)
-            error_response.headers['Content-Type'] = 'application/json'
-            return error_response
+            return jsonify({'error': str(e)}), 500
 
     return render_template('index.html', form=form)
 
 @app.errorhandler(Exception)
 def handle_exception(e):
     logger.error(f"Unhandled exception: {str(e)}", exc_info=True)
-    error_response = make_response(jsonify({'error': str(e)}), 500)
-    error_response.headers['Content-Type'] = 'application/json'
-    return error_response
+    return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
