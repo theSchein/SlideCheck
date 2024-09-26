@@ -1,6 +1,7 @@
 import os
 import logging
-from flask import Flask, render_template, request, jsonify, make_response
+import json
+from flask import Flask, render_template, request, jsonify, make_response, Response
 from flask_wtf import FlaskForm
 from wtforms import FileField, SubmitField
 from wtforms.validators import DataRequired
@@ -48,28 +49,21 @@ def index():
                 
                 slide_data = process_file(filepath)
                 logger.debug("File processing completed")
+
+                def generate():
+                    yield json.dumps({'status': 'Processing file...'})
+                    deterministic_results = run_deterministic_checks(slide_data)
+                    yield json.dumps({'status': 'Running deterministic checks...', 'results': deterministic_results})
+                    ai_results = run_ai_checks(slide_data)
+                    yield json.dumps({'status': 'Completed', 'results': deterministic_results + ai_results})
+
+                return Response(generate(), mimetype='application/json')
             else:
                 logger.warning("No file provided")
                 error_response = jsonify({'error': 'No file provided'})
                 error_response.headers['Content-Type'] = 'application/json'
                 logger.debug(f"Sending error response: {error_response.get_data(as_text=True)}")
                 return error_response, 400
-
-            logger.debug("Running deterministic checks")
-            deterministic_results = run_deterministic_checks(slide_data)
-            logger.debug("Deterministic checks completed")
-
-            logger.debug("Running AI checks")
-            ai_results = run_ai_checks(slide_data)
-            logger.debug("AI checks completed")
-
-            results = deterministic_results + ai_results
-            logger.debug(f"Validation complete. Results: {results}")
-            
-            response = jsonify(results)
-            response.headers['Content-Type'] = 'application/json'
-            logger.debug(f"Sending response: {response.get_data(as_text=True)}")
-            return response
         except Exception as e:
             logger.error(f"Error during processing: {str(e)}", exc_info=True)
             error_response = jsonify({'error': str(e)})
