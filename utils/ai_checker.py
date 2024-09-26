@@ -9,20 +9,38 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+OPENAI_ORG_ID = os.environ.get("OPENAI_ORG_ID")
+OPENAI_PROJECT_ID = os.environ.get("OPENAI_PROJECT_ID")
 
 print(f"OPENAI_API_KEY is {'set' if OPENAI_API_KEY else 'not set'}")
+print(f"OPENAI_ORG_ID is {'set' if OPENAI_ORG_ID else 'not set'}")
+print(f"OPENAI_PROJECT_ID is {'set' if OPENAI_PROJECT_ID else 'not set'}")
 
 if not OPENAI_API_KEY:
     logger.warning("OPENAI_API_KEY is not set. AI checks will be skipped.")
     openai_client = None
 else:
-    openai_client = OpenAI(api_key=OPENAI_API_KEY)
+    if OPENAI_ORG_ID and OPENAI_PROJECT_ID:
+        openai_client = OpenAI(
+            api_key=OPENAI_API_KEY,
+            organization=OPENAI_ORG_ID,
+            project=OPENAI_PROJECT_ID
+        )
+    elif OPENAI_ORG_ID:
+        openai_client = OpenAI(
+            api_key=OPENAI_API_KEY,
+            organization=OPENAI_ORG_ID
+        )
+    else:
+        openai_client = OpenAI(api_key=OPENAI_API_KEY)
 
 def check_openai_connection():
     prompt = "This is a test connection. Please respond with 'Connected'."
     try:
         response = send_openai_request(prompt, max_retries=3, base_delay=1, max_delay=5)
         print(f"OpenAI API response: {response}")
+        print(f"Using organization: {OPENAI_ORG_ID if OPENAI_ORG_ID else 'Default'}")
+        print(f"Using project: {OPENAI_PROJECT_ID if OPENAI_PROJECT_ID else 'Default'}")
         return response == "Connected"
     except Exception as e:
         print(f"Error connecting to OpenAI API: {str(e)}")
@@ -80,7 +98,10 @@ def send_openai_request(prompt: str, max_retries=10, base_delay=1, max_delay=120
             return content
         except Exception as e:
             print(f"Error in send_openai_request: {str(e)}")
-            raise
+            if attempt == max_retries - 1:
+                raise
+            delay = min(max_delay, (base_delay * 2 ** attempt) + random.uniform(0, 0.1 * (2 ** attempt)))
+            time.sleep(delay)
 
 def check_title_slide(slide_data):
     first_slide_content = slide_data['content'][0] if slide_data['content'] else ""
