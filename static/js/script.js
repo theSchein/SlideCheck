@@ -38,16 +38,7 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(error => {
             console.error('Error:', error);
-            return error.response ? error.response.text() : 'Unknown error occurred';
-        })
-        .then(errorText => {
-            try {
-                const errorJson = JSON.parse(errorText);
-                resultsDiv.innerHTML = `<p>An error occurred: ${errorJson.error}</p>`;
-            } catch (e) {
-                console.error('Error parsing JSON:', e);
-                resultsDiv.innerHTML = `<p>An error occurred: ${errorText}</p>`;
-            }
+            resultsDiv.innerHTML = `<p>An error occurred: ${error.message}</p>`;
         });
     });
 });
