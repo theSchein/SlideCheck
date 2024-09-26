@@ -18,7 +18,7 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 class SlideForm(FlaskForm):
-    file = FileField('Upload PDF Slide Deck', validators=[DataRequired()])
+    file = FileField('Upload Slide Deck', validators=[DataRequired()])
     submit = SubmitField('Validate')
 
 @app.route('/', methods=['GET', 'POST'])
@@ -30,8 +30,9 @@ def index():
             if form.file.data:
                 logger.debug(f"Processing uploaded file: {form.file.data.filename}")
                 filename = secure_filename(form.file.data.filename)
-                if not filename.lower().endswith('.pdf'):
-                    raise ValueError("Only PDF files are accepted.")
+                allowed_extensions = {'pdf', 'pptx', 'odp'}
+                if not filename.lower().rsplit('.', 1)[1] in allowed_extensions:
+                    raise ValueError("Only PDF, PowerPoint (.pptx), and LibreOffice Presentation (.odp) files are accepted.")
                 
                 filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
                 form.file.data.save(filepath)

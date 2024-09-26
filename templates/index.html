@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI PDF Slide Validator</title>
+    <title>AI Slide Deck Validator</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
     <div class="container">
-        <h1>AI PDF Slide Validator</h1>
+        <h1>AI Slide Deck Validator</h1>
+        <p>Upload your slide deck (PDF, PowerPoint, or LibreOffice Presentation) for validation.</p>
         <form method="POST" enctype="multipart/form-data">
             {{ form.hidden_tag() }}
             <div>
