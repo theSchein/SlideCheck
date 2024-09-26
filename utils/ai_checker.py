@@ -12,9 +12,9 @@ OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 OPENAI_ORG_ID = os.environ.get("OPENAI_ORG_ID")
 OPENAI_PROJECT_ID = os.environ.get("OPENAI_PROJECT_ID")
 
-print(f"OPENAI_API_KEY is {'set' if OPENAI_API_KEY else 'not set'}")
-print(f"OPENAI_ORG_ID is {'set' if OPENAI_ORG_ID else 'not set'}")
-print(f"OPENAI_PROJECT_ID is {'set' if OPENAI_PROJECT_ID else 'not set'}")
+logger.debug(f"Initializing OpenAI client with API key: {'[REDACTED]' if OPENAI_API_KEY else 'Not set'}")
+logger.debug(f"Using organization: {OPENAI_ORG_ID if OPENAI_ORG_ID else 'Default'}")
+logger.debug(f"Using project: {OPENAI_PROJECT_ID if OPENAI_PROJECT_ID else 'Default'}")
 
 if not OPENAI_API_KEY:
     logger.warning("OPENAI_API_KEY is not set. AI checks will be skipped.")
@@ -37,13 +37,12 @@ else:
 def check_openai_connection():
     prompt = "This is a test connection. Please respond with 'Connected'."
     try:
+        logger.debug("Attempting to connect to OpenAI API...")
         response = send_openai_request(prompt, max_retries=3, base_delay=1, max_delay=5)
-        print(f"OpenAI API response: {response}")
-        print(f"Using organization: {OPENAI_ORG_ID if OPENAI_ORG_ID else 'Default'}")
-        print(f"Using project: {OPENAI_PROJECT_ID if OPENAI_PROJECT_ID else 'Default'}")
+        logger.debug(f"OpenAI API response: {response}")
         return response == "Connected"
     except Exception as e:
-        print(f"Error connecting to OpenAI API: {str(e)}")
+        logger.error(f"Error connecting to OpenAI API: {str(e)}", exc_info=True)
         return False
 
 def run_ai_checks(slide_data):
@@ -82,26 +81,34 @@ def run_ai_checks(slide_data):
 
 def send_openai_request(prompt: str, max_retries=10, base_delay=1, max_delay=120) -> str:
     if not openai_client:
+        logger.warning("OpenAI client is not initialized. Skipping AI check.")
         return "AI check skipped"
     
     for attempt in range(max_retries):
         try:
             logger.debug(f"Sending request to OpenAI API (attempt {attempt + 1}/{max_retries})")
-            print(f"Using model: gpt-4o-mini")
+            logger.debug(f"Using model: gpt-4o")
             completion = openai_client.chat.completions.create(
-                model="gpt-4o-mini", messages=[{"role": "user", "content": prompt}], max_tokens=100
+                model="gpt-4o", messages=[{"role": "user", "content": prompt}], max_tokens=100
             )
             content = completion.choices[0].message.content
             if not content:
                 raise ValueError("OpenAI returned an empty response.")
             logger.debug("Successfully received response from OpenAI API")
             return content
+        except APIError as e:
+            logger.error(f"OpenAI API error: {str(e)}", exc_info=True)
+        except RateLimitError as e:
+            logger.error(f"Rate limit error: {str(e)}", exc_info=True)
         except Exception as e:
-            print(f"Error in send_openai_request: {str(e)}")
-            if attempt == max_retries - 1:
-                raise
-            delay = min(max_delay, (base_delay * 2 ** attempt) + random.uniform(0, 0.1 * (2 ** attempt)))
-            time.sleep(delay)
+            logger.error(f"Error in send_openai_request: {str(e)}", exc_info=True)
+        
+        if attempt == max_retries - 1:
+            logger.error("Max retries reached. Unable to connect to OpenAI API.")
+            raise
+        delay = min(max_delay, (base_delay * 2 ** attempt) + random.uniform(0, 0.1 * (2 ** attempt)))
+        logger.info(f"Retrying in {delay:.2f} seconds...")
+        time.sleep(delay)
 
 def check_title_slide(slide_data):
     first_slide_content = slide_data['content'][0] if slide_data['content'] else ""
