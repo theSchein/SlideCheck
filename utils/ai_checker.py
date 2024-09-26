@@ -32,11 +32,6 @@ def run_ai_checks(slide_data):
     bullet_point_check = check_bullet_point_density(slide_data)
     results.append(bullet_point_check)
 
-    time.sleep(2)
-
-    image_presence_check = check_image_presence(slide_data)
-    results.append(image_presence_check)
-
     return results
 
 def send_openai_request_with_function(prompt: str, max_retries=10, base_delay=1, max_delay=120) -> str:
@@ -133,28 +128,4 @@ def check_bullet_point_density(slide_data):
         'check': 'Bullet Point Density',
         'passed': not is_text_heavy,
         'message': 'The slides have a good balance of text and visuals.' if not is_text_heavy else 'The slides may be too text-heavy or have too many bullet points.'
-    }
-
-def check_image_presence(slide_data):
-    all_text = ' '.join(slide_data['content'])
-    prompt = (
-        "You are an assistant that determines if a slide deck contains images.\n"
-        "Analyze the following slide content and answer with 'Yes' or 'No' only.\n"
-        "Look for indications of image descriptions, captions, or references to visual elements.\n\n"
-        f"Slide Content:\n{all_text[:1500]}"
-    )
-    response = send_openai_request_with_function(prompt)
-
-    if response.startswith("AI check failed"):
-        return {
-            'check': 'Image Presence',
-            'passed': False,
-            'message': response
-        }
-
-    has_images = response.lower() == 'yes'
-    return {
-        'check': 'Image Presence',
-        'passed': has_images,
-        'message': 'The deck contains images.' if has_images else 'No images detected in the deck.'
     }

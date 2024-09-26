@@ -31,4 +31,19 @@ def run_deterministic_checks(slide_data):
         'message': 'Audio/Video check not implemented for this file type.'
     })
 
+    # Add the new image presence check
+    results.append(check_image_presence(slide_data))
+
     return results
+
+def check_image_presence(slide_data):
+    # This is a simple check that looks for common image-related keywords in the slide content
+    image_keywords = ['image', 'picture', 'photo', 'figure', 'diagram', 'graph', 'chart']
+    all_text = ' '.join(slide_data['content']).lower()
+    has_images = any(keyword in all_text for keyword in image_keywords)
+    
+    return {
+        'check': 'Image Presence',
+        'passed': has_images,
+        'message': 'The deck likely contains images.' if has_images else 'No images detected in the deck.'
+    }
