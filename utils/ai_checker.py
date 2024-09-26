@@ -14,17 +14,6 @@ logger.debug(f"Initializing OpenAI client with API key: {'[REDACTED]' if OPENAI_
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 
-def check_openai_connection():
-    prompt = "This is a test connection. Please respond with a short message."
-    try:
-        logger.debug("Attempting to connect to OpenAI API...")
-        response = send_openai_request_with_function(prompt)
-        logger.debug(f"OpenAI API response: {response}")
-        return len(response.strip()) > 0  # Check if we received any non-empty response
-    except Exception as e:
-        logger.error(f"Error connecting to OpenAI API: {str(e)}", exc_info=True)
-        return False
-
 def run_ai_checks(slide_data):
     if not OPENAI_API_KEY:
         return [{
@@ -35,17 +24,6 @@ def run_ai_checks(slide_data):
 
     results = []
 
-    connection_passed = check_openai_connection()
-    connection_check = {
-        'check': 'OpenAI Connection',
-        'passed': connection_passed,
-        'message': 'Successfully connected to OpenAI API.' if connection_passed else 'Failed to connect to OpenAI API. Please check your API key and network connection.'
-    }
-    results.append(connection_check)
-
-    if not connection_passed:
-        return results
-
     title_check = check_title_slide(slide_data)
     results.append(title_check)
 
@@ -53,6 +31,11 @@ def run_ai_checks(slide_data):
 
     bullet_point_check = check_bullet_point_density(slide_data)
     results.append(bullet_point_check)
+
+    time.sleep(2)
+
+    image_presence_check = check_image_presence(slide_data)
+    results.append(image_presence_check)
 
     return results
 
@@ -132,6 +115,7 @@ def check_bullet_point_density(slide_data):
     prompt = (
         "You are an assistant that evaluates slide content for bullet point density.\n"
         "Determine if the slides have too many bullet points or are too text-heavy.\n"
+        "Each slide should have less than 6 bullet points and less than 500 words.\n"
         "Answer with 'Yes' or 'No' only.\n\n"
         f"Slide Content:\n{all_text[:1500]}"
     )
@@ -149,4 +133,28 @@ def check_bullet_point_density(slide_data):
         'check': 'Bullet Point Density',
         'passed': not is_text_heavy,
         'message': 'The slides have a good balance of text and visuals.' if not is_text_heavy else 'The slides may be too text-heavy or have too many bullet points.'
+    }
+
+def check_image_presence(slide_data):
+    all_text = ' '.join(slide_data['content'])
+    prompt = (
+        "You are an assistant that determines if a slide deck contains images.\n"
+        "Analyze the following slide content and answer with 'Yes' or 'No' only.\n"
+        "Look for indications of image descriptions, captions, or references to visual elements.\n\n"
+        f"Slide Content:\n{all_text[:1500]}"
+    )
+    response = send_openai_request_with_function(prompt)
+
+    if response.startswith("AI check failed"):
+        return {
+            'check': 'Image Presence',
+            'passed': False,
+            'message': response
+        }
+
+    has_images = response.lower() == 'yes'
+    return {
+        'check': 'Image Presence',
+        'passed': has_images,
+        'message': 'The deck contains images.' if has_images else 'No images detected in the deck.'
     }
