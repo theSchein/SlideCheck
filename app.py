@@ -28,11 +28,21 @@ def index():
         try:
             logger.debug("Form submitted successfully")
             if form.file.data:
-                logger.debug("Processing uploaded file")
+                logger.debug(f"Processing uploaded file: {form.file.data.filename}")
                 filename = secure_filename(form.file.data.filename)
                 filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
                 form.file.data.save(filepath)
                 logger.debug(f"File saved: {filepath}")
+                
+                # Check if file exists and is readable
+                if not os.path.exists(filepath):
+                    raise FileNotFoundError(f"File not found: {filepath}")
+                if not os.access(filepath, os.R_OK):
+                    raise PermissionError(f"File not readable: {filepath}")
+                
+                file_size = os.path.getsize(filepath)
+                logger.debug(f"File size: {file_size} bytes")
+                
                 slide_data = process_file(filepath)
                 logger.debug("File processing completed")
             elif form.url.data:
