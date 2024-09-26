@@ -3,7 +3,7 @@ import time
 import random
 import logging
 from openai import OpenAI
-from openai import APIError, RateLimitError
+from openai import APIError, RateLimitError, AuthenticationError
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -96,16 +96,22 @@ def send_openai_request(prompt: str, max_retries=10, base_delay=1, max_delay=120
                 raise ValueError("OpenAI returned an empty response.")
             logger.debug("Successfully received response from OpenAI API")
             return content
-        except APIError as e:
-            logger.error(f"OpenAI API error: {str(e)}", exc_info=True)
+        except AuthenticationError as e:
+            logger.error(f"Authentication error: {str(e)}")
+            return "AI check failed: Invalid API key or token."
         except RateLimitError as e:
-            logger.error(f"Rate limit error: {str(e)}", exc_info=True)
+            logger.error(f"Rate limit error: {str(e)}")
+            if attempt == max_retries - 1:
+                return "AI check failed: Rate limit exceeded. Please try again later."
+        except APIError as e:
+            logger.error(f"OpenAI API error: {str(e)}")
+            if attempt == max_retries - 1:
+                return f"AI check failed: OpenAI API error - {str(e)}"
         except Exception as e:
-            logger.error(f"Error in send_openai_request: {str(e)}", exc_info=True)
+            logger.error(f"Unexpected error in send_openai_request: {str(e)}", exc_info=True)
+            if attempt == max_retries - 1:
+                return f"AI check failed: Unexpected error - {str(e)}"
         
-        if attempt == max_retries - 1:
-            logger.error("Max retries reached. Unable to connect to OpenAI API.")
-            raise
         delay = min(max_delay, (base_delay * 2 ** attempt) + random.uniform(0, 0.1 * (2 ** attempt)))
         logger.info(f"Retrying in {delay:.2f} seconds...")
         time.sleep(delay)
