@@ -14,12 +14,12 @@ logger.debug(f"Initializing OpenAI client with API key: {'[REDACTED]' if OPENAI_
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 def check_openai_connection():
-    prompt = "This is a test connection. Please respond with 'Connected'."
+    prompt = "This is a test connection. Please respond with a short message."
     try:
         logger.debug("Attempting to connect to OpenAI API...")
         response = send_openai_request(prompt, max_retries=3, base_delay=1, max_delay=5)
         logger.debug(f"OpenAI API response: {response}")
-        return response.strip() == "Connected"
+        return len(response.strip()) > 0  # Check if we received any non-empty response
     except Exception as e:
         logger.error(f"Error connecting to OpenAI API: {str(e)}", exc_info=True)
         return False
@@ -38,7 +38,7 @@ def run_ai_checks(slide_data):
     connection_check = {
         'check': 'OpenAI Connection',
         'passed': connection_passed,
-        'message': 'Successfully connected to OpenAI API.' if connection_passed else 'Failed to connect to OpenAI API.'
+        'message': 'Successfully connected to OpenAI API.' if connection_passed else 'Failed to connect to OpenAI API. Please check your API key and network connection.'
     }
     results.append(connection_check)
 
