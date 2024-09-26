@@ -10,7 +10,12 @@ document.addEventListener('DOMContentLoaded', function() {
             method: 'POST',
             body: formData
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             resultsDiv.innerHTML = '';
             data.forEach(result => {
@@ -27,7 +32,13 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(error => {
             console.error('Error:', error);
-            resultsDiv.innerHTML = '<p>An error occurred while processing your request.</p>';
+            return error.response ? error.response.text() : 'Unknown error occurred';
+        })
+        .then(errorText => {
+            if (errorText) {
+                console.error('Error response:', errorText);
+                resultsDiv.innerHTML = '<p>An error occurred while processing your request. Please check the console for more details.</p>';
+            }
         });
     });
 });

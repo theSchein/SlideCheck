@@ -25,8 +25,8 @@ class SlideForm(FlaskForm):
 def index():
     form = SlideForm()
     if form.validate_on_submit():
+        logger.debug("Form submitted successfully")
         try:
-            logger.debug("Form submitted successfully")
             if form.file.data:
                 logger.debug("Processing uploaded file")
                 filename = secure_filename(form.file.data.filename)
@@ -59,7 +59,7 @@ def index():
             return response
         except Exception as e:
             logger.error(f"Error during processing: {str(e)}", exc_info=True)
-            error_response = make_response(jsonify({'error': str(e)}), 400)
+            error_response = make_response(jsonify({'error': str(e)}), 500)
             error_response.headers['Content-Type'] = 'application/json'
             return error_response
 

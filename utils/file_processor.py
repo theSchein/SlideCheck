@@ -42,20 +42,33 @@ def process_pdf(filepath):
     logger.debug(f"Starting to process PDF file: {filepath}")
     try:
         with open(filepath, 'rb') as file:
-            reader = PyPDF2.PdfReader(file)
-            num_pages = len(reader.pages)
-            logger.debug(f"Number of pages in PDF: {num_pages}")
+            logger.debug("Opening PDF file")
+            try:
+                reader = PyPDF2.PdfReader(file)
+                logger.debug("Successfully created PdfReader object")
+            except PyPDF2.errors.PdfReadError as e:
+                logger.error(f"Error creating PdfReader object: {str(e)}")
+                raise
+
+            try:
+                num_pages = len(reader.pages)
+                logger.debug(f"Number of pages in PDF: {num_pages}")
+            except Exception as e:
+                logger.error(f"Error getting number of pages: {str(e)}")
+                raise
+
             text_content = []
             for i in range(num_pages):
                 logger.debug(f"Processing page {i+1}")
-                page = reader.pages[i]
                 try:
+                    page = reader.pages[i]
                     text = page.extract_text()
                     logger.debug(f"Extracted text from page {i+1}: {text[:100]}...")  # Log first 100 characters
                     text_content.append(text)
                 except Exception as e:
                     logger.error(f"Error extracting text from page {i+1}: {str(e)}")
                     text_content.append("")  # Add empty string for failed extractions
+
         logger.debug("PDF processing completed successfully")
         return {
             'type': 'pdf',
