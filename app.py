@@ -37,7 +37,7 @@ def index():
                 allowed_extensions = {'pdf', 'pptx', 'odp'}
                 file_extension = filename.rsplit('.', 1)[1].lower()
                 if file_extension not in allowed_extensions:
-                    raise ValueError(f"Unsupported file type: .{file_extension}. Supported types are PDF, PowerPoint (.pptx), and LibreOffice Presentation (.odp).")
+                    raise ValueError(f"Unsupported file type: .{file_extension}. Supported types are PDF, PowerPoint (.pptx), and LibreOffice Presentation (.odp). For Google Slides or Figma presentations, please export as PDF before uploading.")
                 
                 filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
                 form.file.data.save(filepath)

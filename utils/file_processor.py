@@ -19,8 +19,10 @@ def process_file(filepath):
             return process_pptx(filepath)
         elif file_type == 'application/vnd.oasis.opendocument.presentation':
             return process_odp(filepath)
+        elif file_type in ['application/vnd.google-apps.presentation', 'application/x-figma']:
+            raise ValueError(f"Unsupported file type: {file_type}. Please export Google Slides or Figma presentations as PDF files before uploading.")
         else:
-            raise ValueError(f"Unsupported file type: {file_type}. Supported types are PDF, PowerPoint, and LibreOffice Presentation.")
+            raise ValueError(f"Unsupported file type: {file_type}. Supported types are PDF, PowerPoint (.pptx), and LibreOffice Presentation (.odp).")
     except Exception as e:
         logger.error(f"Error in process_file: {str(e)}", exc_info=True)
         raise
@@ -42,7 +44,7 @@ def process_pdf(filepath):
             'type': 'pdf',
             'num_slides': num_pages,
             'content': text_content,
-            'file_path': filepath  # Add this line
+            'file_path': filepath
         }
     except Exception as e:
         logger.error(f"Error processing PDF file: {str(e)}", exc_info=True)
@@ -68,7 +70,7 @@ def process_pptx(filepath):
             'type': 'powerpoint',
             'num_slides': num_slides,
             'content': text_content,
-            'file_path': filepath  # Add this line
+            'file_path': filepath
         }
     except Exception as e:
         logger.error(f"Error processing PowerPoint file: {str(e)}", exc_info=True)
@@ -92,7 +94,7 @@ def process_odp(filepath):
             'type': 'libreoffice',
             'num_slides': num_slides,
             'content': text_content,
-            'file_path': filepath  # Add this line
+            'file_path': filepath
         }
     except Exception as e:
         logger.error(f"Error processing LibreOffice Presentation file: {str(e)}", exc_info=True)
