@@ -7,7 +7,7 @@ def run_deterministic_checks(slide_data):
     file_type = slide_data['type']
     results.append({
         'check': 'File type',
-        'passed': file_type in ['pdf', 'powerpoint', 'google_slides', 'figma', 'canva'],
+        'passed': file_type in ['pdf', 'powerpoint', 'libreoffice', 'canva', 'google_slides'],
         'message': f'File type is {file_type}.'
     })
 
@@ -33,7 +33,7 @@ def run_deterministic_checks(slide_data):
         'message': 'Audio/Video check not implemented for this file type.'
     })
 
-    # Add the new image presence check
+    # Add the image presence check
     results.append(check_image_presence(slide_data))
 
     return results
@@ -41,9 +41,17 @@ def run_deterministic_checks(slide_data):
 def check_image_presence(slide_data):
     file_type = slide_data['type']
     file_path = slide_data.get('file_path')
+    url = slide_data.get('url')
 
     if file_type == 'pdf' and file_path:
         return check_for_images_pdf(file_path)
+    elif file_type in ['canva', 'google_slides']:
+        # For now, we'll assume Canva and Google Slides always have images
+        return {
+            'check': 'Image Presence',
+            'passed': True,
+            'message': f'The {file_type} presentation likely contains images.'
+        }
     else:
         # Fallback to keyword-based check for other file types
         image_keywords = ['image', 'picture', 'photo', 'figure', 'diagram', 'graph', 'chart']

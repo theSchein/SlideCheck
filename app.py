@@ -2,8 +2,8 @@ import os
 import logging
 from flask import Flask, render_template, request, jsonify
 from flask_wtf import FlaskForm
-from wtforms import FileField, SubmitField
-from wtforms.validators import DataRequired
+from wtforms import FileField, StringField, SubmitField
+from wtforms.validators import DataRequired, URL, Optional
 from werkzeug.utils import secure_filename
 from utils.file_processor import process_file
 from utils.deterministic_checker import run_deterministic_checks
@@ -22,13 +22,23 @@ logger = logging.getLogger(__name__)
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 class SlideForm(FlaskForm):
-    file = FileField('Upload Slide Deck (PDF, PPTX, ODP)', validators=[DataRequired()])
+    file = FileField('Upload Slide Deck (PDF, PPTX, ODP)', validators=[Optional()])
+    url = StringField('Or enter Canva or Google Slides URL', validators=[Optional(), URL()])
     submit = SubmitField('Validate')
+
+    def validate(self):
+        if not FlaskForm.validate(self):
+            return False
+        if not self.file.data and not self.url.data:
+            self.file.errors.append('Please either upload a file or provide a URL.')
+            self.url.errors.append('Please either upload a file or provide a URL.')
+            return False
+        return True
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
     form = SlideForm()
-    if request.method == 'POST':
+    if request.method == 'POST' and form.validate():
         try:
             logger.debug("Form submitted successfully")
             if form.file.data:
@@ -37,7 +47,7 @@ def index():
                 allowed_extensions = {'pdf', 'pptx', 'odp'}
                 file_extension = filename.rsplit('.', 1)[1].lower()
                 if file_extension not in allowed_extensions:
-                    raise ValueError(f"Unsupported file type: .{file_extension}. Supported types are PDF, PowerPoint (.pptx), and LibreOffice Presentation (.odp). For Google Slides or Figma presentations, please export as PDF before uploading.")
+                    raise ValueError(f"Unsupported file type: .{file_extension}. Supported types are PDF, PowerPoint (.pptx), and LibreOffice Presentation (.odp).")
                 
                 filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
                 form.file.data.save(filepath)
@@ -53,22 +63,23 @@ def index():
                 logger.debug(f"File size: {file_size} bytes")
                 
                 slide_data = process_file(filepath)
-                logger.debug("File processing completed")
+            elif form.url.data:
+                logger.debug(f"Processing URL: {form.url.data}")
+                slide_data = process_file(form.url.data)
+            
+            logger.debug("File processing completed")
 
-                deterministic_results = run_deterministic_checks(slide_data)
-                logger.debug("Deterministic checks completed")
-                ai_results = run_ai_checks(slide_data)
-                logger.debug("AI checks completed")
+            deterministic_results = run_deterministic_checks(slide_data)
+            logger.debug("Deterministic checks completed")
+            ai_results = run_ai_checks(slide_data)
+            logger.debug("AI checks completed")
 
-                all_results = deterministic_results + ai_results
-                response = jsonify({'status': 'Completed', 'results': all_results})
-                response.headers['Content-Type'] = 'application/json'
-                logger.debug(f"Sending response: {response.get_data(as_text=True)}")
-                return response
+            all_results = deterministic_results + ai_results
+            response = jsonify({'status': 'Completed', 'results': all_results})
+            response.headers['Content-Type'] = 'application/json'
+            logger.debug(f"Sending response: {response.get_data(as_text=True)}")
+            return response
 
-            else:
-                logger.warning("No file provided")
-                return jsonify({'error': 'No file provided'}), 400
         except Exception as e:
             logger.error(f"Error during processing: {str(e)}", exc_info=True)
             return jsonify({'error': str(e)}), 500

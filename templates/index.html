@@ -9,18 +9,23 @@
 <body>
     <div class="container">
         <h1>AI Slide Deck Validator</h1>
-        <p>Upload your slide deck for validation. Supported file types:</p>
+        <p>Upload your slide deck for validation or provide a Canva or Google Slides URL. Supported file types:</p>
         <ul>
             <li>PDF (.pdf)</li>
             <li>PowerPoint (.pptx)</li>
             <li>LibreOffice Presentation (.odp)</li>
+            <li>Canva presentation URL</li>
+            <li>Google Slides URL</li>
         </ul>
-        <p><strong>Note:</strong> For Google Slides or Figma presentations, please export as PDF before uploading.</p>
         <form method="POST" enctype="multipart/form-data">
             {{ form.hidden_tag() }}
             <div>
                 {{ form.file.label }}
                 {{ form.file() }}
+            </div>
+            <div>
+                {{ form.url.label }}
+                {{ form.url() }}
             </div>
             {{ form.submit() }}
         </form>
