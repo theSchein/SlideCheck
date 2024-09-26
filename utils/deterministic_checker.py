@@ -13,8 +13,8 @@ def run_deterministic_checks(slide_data):
     num_slides = slide_data['num_slides']
     results.append({
         'check': 'Number of slides',
-        'passed': 10 <= num_slides <= 30,
-        'message': f'The deck has {num_slides} slides. Ideal range is 10-30 slides.'
+        'passed': 5 <= num_slides <= 15,
+        'message': f'The deck has {num_slides} slides. Ideal range is 5-15 slides.'
     })
 
     # Check for fonts (placeholder - actual implementation would depend on file type)

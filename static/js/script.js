@@ -31,14 +31,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     <span class="${result.passed ? 'success' : 'failure'}">
                         ${result.passed ? '✅' : '❌'}
                     </span>
-                    ${result.check}: ${result.message}
+                    <strong>${result.check}:</strong> ${result.message}
                 `;
                 resultsDiv.appendChild(resultItem);
             });
         })
         .catch(error => {
             console.error('Error:', error);
-            resultsDiv.innerHTML = `<p>An error occurred: ${error.message}</p>`;
+            resultsDiv.innerHTML = `<p class="error">An error occurred: ${error.message}</p>`;
         });
     });
 });
