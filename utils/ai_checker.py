@@ -1,16 +1,25 @@
 import os
 import time
 import random
+import logging
 from openai import OpenAI
 from openai import APIError, RateLimitError
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
 if not OPENAI_API_KEY:
-    print("Warning: OPENAI_API_KEY is not set. AI checks will be skipped.")
+    logger.warning("OPENAI_API_KEY is not set. AI checks will be skipped.")
     openai_client = None
 else:
     openai_client = OpenAI(api_key=OPENAI_API_KEY)
+
+def check_openai_connection():
+    prompt = "This is a test connection. Please respond with 'Connected'."
+    response = send_openai_request(prompt, max_retries=3, base_delay=1, max_delay=5)
+    return response == "Connected"
 
 def run_ai_checks(slide_data):
     if not openai_client:
@@ -22,12 +31,23 @@ def run_ai_checks(slide_data):
 
     results = []
 
+    # Check OpenAI connection
+    connection_check = {
+        'check': 'OpenAI Connection',
+        'passed': check_openai_connection(),
+        'message': 'Successfully connected to OpenAI API.' if check_openai_connection() else 'Failed to connect to OpenAI API.'
+    }
+    results.append(connection_check)
+
+    if not connection_check['passed']:
+        return results
+
     # Check for title slide
     title_check = check_title_slide(slide_data)
     results.append(title_check)
 
-    # Add a small delay between checks
-    time.sleep(1)
+    # Add a delay between checks
+    time.sleep(2)
 
     # Check for bullet point density
     bullet_point_check = check_bullet_point_density(slide_data)
@@ -35,27 +55,33 @@ def run_ai_checks(slide_data):
 
     return results
 
-def send_openai_request(prompt: str, max_retries=5, base_delay=1, max_delay=60) -> str:
+def send_openai_request(prompt: str, max_retries=10, base_delay=1, max_delay=120) -> str:
     if not openai_client:
         return "AI check skipped"
     
     for attempt in range(max_retries):
         try:
+            logger.debug(f"Sending request to OpenAI API (attempt {attempt + 1}/{max_retries})")
             completion = openai_client.chat.completions.create(
                 model="gpt-4o-mini", messages=[{"role": "user", "content": prompt}], max_tokens=100
             )
             content = completion.choices[0].message.content
             if not content:
                 raise ValueError("OpenAI returned an empty response.")
+            logger.debug("Successfully received response from OpenAI API")
             return content
         except RateLimitError:
             if attempt == max_retries - 1:
+                logger.error("Rate limit exceeded. Max retries reached.")
                 return "AI check failed: Rate limit exceeded. Please try again later."
             delay = min(max_delay, (base_delay * 2 ** attempt) + random.uniform(0, 0.1 * (2 ** attempt)))
+            logger.warning(f"Rate limit hit. Retrying in {delay:.2f} seconds...")
             time.sleep(delay)
         except APIError as e:
+            logger.error(f"OpenAI API error: {str(e)}")
             return f"AI check failed: OpenAI API error - {str(e)}"
         except Exception as e:
+            logger.error(f"Unexpected error: {str(e)}")
             return f"AI check failed: Unexpected error - {str(e)}"
 
 def check_title_slide(slide_data):
