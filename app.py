@@ -21,6 +21,9 @@ logger = logging.getLogger(__name__)
 # Initialize OpenAI client
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
+# Set up Google Slides API credentials path
+os.environ['GOOGLE_CREDENTIALS_PATH'] = os.environ.get('GOOGLE_CREDENTIALS_PATH', 'path/to/credentials.json')
+
 class SlideForm(FlaskForm):
     file = FileField('Upload Slide Deck (PDF, PPTX, ODP)', validators=[Optional()])
     url = StringField('Or enter Canva or Google Slides URL', validators=[Optional(), URL()])
@@ -66,6 +69,10 @@ def index():
             elif form.url.data:
                 logger.debug(f"Processing URL: {form.url.data}")
                 slide_data = process_file(form.url.data)
+                
+                # Check if there was an error processing Google Slides
+                if slide_data['type'] == 'google_slides' and slide_data['num_slides'] == 0:
+                    return jsonify({'error': slide_data['content'][0]}), 400
             
             logger.debug("File processing completed")
 

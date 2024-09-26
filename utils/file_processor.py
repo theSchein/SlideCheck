@@ -7,6 +7,9 @@ from odf.opendocument import load
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse
+from googleapiclient.discovery import build
+from google.oauth2.credentials import Credentials
+import os
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -68,22 +71,73 @@ def process_canva(url):
 
 def process_google_slides(url):
     logger.debug(f"Processing Google Slides URL: {url}")
-    # Note: This is a placeholder implementation. Actual implementation would require Google Slides API access.
-    response = requests.get(url)
-    soup = BeautifulSoup(response.text, 'html.parser')
     
-    # Extract title
-    title = soup.title.string if soup.title else "Untitled Google Slides Presentation"
-    
-    # Extract text content (this is a simplified approach and may not work for all Google Slides)
-    text_content = [p.get_text() for p in soup.find_all('p')]
-    
-    return {
-        'type': 'google_slides',
-        'num_slides': len(text_content),  # This is an approximation
-        'content': text_content,
-        'url': url
-    }
+    # Extract the presentation ID from the URL
+    presentation_id = url.split('/')[-2]
+
+    try:
+        # Check if the GOOGLE_CREDENTIALS_PATH environment variable is set
+        credentials_path = os.environ.get('GOOGLE_CREDENTIALS_PATH')
+        if not credentials_path:
+            raise ValueError("GOOGLE_CREDENTIALS_PATH environment variable is not set.")
+        
+        # Check if the credentials file exists
+        if not os.path.exists(credentials_path):
+            raise FileNotFoundError(f"Google credentials file not found at {credentials_path}")
+        
+        # Set up credentials
+        creds = Credentials.from_authorized_user_file(credentials_path)
+
+        # Build the Google Slides API service
+        service = build('slides', 'v1', credentials=creds)
+
+        # Call the Slides API
+        presentation = service.presentations().get(presentationId=presentation_id).execute()
+        slides = presentation.get('slides', [])
+
+        num_slides = len(slides)
+        content = []
+
+        for slide in slides:
+            slide_content = ""
+            for element in slide.get('pageElements', []):
+                if 'shape' in element and 'text' in element['shape']:
+                    for textElement in element['shape']['text'].get('textElements', []):
+                        if 'textRun' in textElement:
+                            slide_content += textElement['textRun']['content']
+            content.append(slide_content)
+
+        logger.debug(f"Successfully processed Google Slides presentation with {num_slides} slides")
+        return {
+            'type': 'google_slides',
+            'num_slides': num_slides,
+            'content': content,
+            'url': url
+        }
+    except ValueError as ve:
+        logger.error(f"Google Slides authentication error: {str(ve)}")
+        return {
+            'type': 'google_slides',
+            'num_slides': 0,
+            'content': ["Error: Google Slides authentication not properly configured. Please set up the GOOGLE_CREDENTIALS_PATH environment variable."],
+            'url': url
+        }
+    except FileNotFoundError as fnf:
+        logger.error(f"Google Slides credentials file error: {str(fnf)}")
+        return {
+            'type': 'google_slides',
+            'num_slides': 0,
+            'content': ["Error: Google Slides credentials file not found. Please check the GOOGLE_CREDENTIALS_PATH environment variable."],
+            'url': url
+        }
+    except Exception as e:
+        logger.error(f"Error processing Google Slides: {str(e)}", exc_info=True)
+        return {
+            'type': 'google_slides',
+            'num_slides': 0,
+            'content': [f"Error processing Google Slides: {str(e)}"],
+            'url': url
+        }
 
 def process_pdf(filepath):
     logger.debug(f"Starting to process PDF file: {filepath}")
