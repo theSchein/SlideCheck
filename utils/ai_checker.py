@@ -26,13 +26,16 @@ def run_ai_checks(slide_data):
     title_check = check_title_slide(slide_data)
     results.append(title_check)
 
+    # Add a small delay between checks
+    time.sleep(1)
+
     # Check for bullet point density
     bullet_point_check = check_bullet_point_density(slide_data)
     results.append(bullet_point_check)
 
     return results
 
-def send_openai_request(prompt: str, max_retries=3, base_delay=1) -> str:
+def send_openai_request(prompt: str, max_retries=5, base_delay=1, max_delay=60) -> str:
     if not openai_client:
         return "AI check skipped"
     
@@ -48,7 +51,7 @@ def send_openai_request(prompt: str, max_retries=3, base_delay=1) -> str:
         except RateLimitError:
             if attempt == max_retries - 1:
                 return "AI check failed: Rate limit exceeded. Please try again later."
-            delay = (base_delay * 2 ** attempt) + random.uniform(0, 0.1 * (2 ** attempt))
+            delay = min(max_delay, (base_delay * 2 ** attempt) + random.uniform(0, 0.1 * (2 ** attempt)))
             time.sleep(delay)
         except APIError as e:
             return f"AI check failed: OpenAI API error - {str(e)}"
