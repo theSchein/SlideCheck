@@ -22,34 +22,17 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            const reader = response.body.getReader();
-            return new ReadableStream({
-                start(controller) {
-                    return pump();
-                    function pump() {
-                        return reader.read().then(({ done, value }) => {
-                            if (done) {
-                                controller.close();
-                                return;
-                            }
-                            controller.enqueue(value);
-                            return pump();
-                        });
-                    }
-                }
-            });
+            return response.json();
         })
-        .then(stream => new Response(stream))
-        .then(response => response.json())
         .then(data => {
             loadingBar.style.width = '100%';
-            if (!data || (Array.isArray(data) && data.length === 0)) {
+            if (!data || !data.results || data.results.length === 0) {
                 throw new Error('Empty or invalid JSON response');
             }
             if (data.error) {
                 throw new Error(data.error);
             }
-            data.forEach(result => {
+            data.results.forEach(result => {
                 const resultItem = document.createElement('div');
                 resultItem.classList.add('result-item');
                 resultItem.innerHTML = `
