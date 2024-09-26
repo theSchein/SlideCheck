@@ -8,6 +8,7 @@ from werkzeug.utils import secure_filename
 from utils.file_processor import process_file
 from utils.deterministic_checker import run_deterministic_checks
 from utils.ai_checker import run_ai_checks
+from openai import OpenAI
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.urandom(24)
@@ -16,6 +17,9 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+
+# Initialize OpenAI client
+client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 class SlideForm(FlaskForm):
     file = FileField('Upload Slide Deck (PDF, PPTX, ODP)', validators=[DataRequired()])
