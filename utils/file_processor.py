@@ -41,7 +41,8 @@ def process_pdf(filepath):
         return {
             'type': 'pdf',
             'num_slides': num_pages,
-            'content': text_content
+            'content': text_content,
+            'file_path': filepath  # Add this line
         }
     except Exception as e:
         logger.error(f"Error processing PDF file: {str(e)}", exc_info=True)
@@ -66,7 +67,8 @@ def process_pptx(filepath):
         return {
             'type': 'powerpoint',
             'num_slides': num_slides,
-            'content': text_content
+            'content': text_content,
+            'file_path': filepath  # Add this line
         }
     except Exception as e:
         logger.error(f"Error processing PowerPoint file: {str(e)}", exc_info=True)
@@ -89,7 +91,8 @@ def process_odp(filepath):
         return {
             'type': 'libreoffice',
             'num_slides': num_slides,
-            'content': text_content
+            'content': text_content,
+            'file_path': filepath  # Add this line
         }
     except Exception as e:
         logger.error(f"Error processing LibreOffice Presentation file: {str(e)}", exc_info=True)
