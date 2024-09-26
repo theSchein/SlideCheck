@@ -10,9 +10,53 @@ from urllib.parse import urlparse
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 import os
+import tempfile
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from pdf2image import convert_from_path
+import io
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+
+def convert_to_pdf(input_file, output_pdf):
+    logger.debug(f"Converting {input_file} to PDF: {output_pdf}")
+    file_type = magic.from_file(input_file, mime=True)
+
+    try:
+        if file_type == 'application/vnd.openxmlformats-officedocument.presentationml.presentation':
+            # Convert PowerPoint to PDF
+            prs = Presentation(input_file)
+            pdf = canvas.Canvas(output_pdf, pagesize=letter)
+
+            for slide in prs.slides:
+                pdf.setFont("Helvetica", 12)
+                y = 700
+                for shape in slide.shapes:
+                    if hasattr(shape, 'text'):
+                        text = shape.text
+                        pdf.drawString(50, y, text)
+                        y -= 20
+                pdf.showPage()
+
+            pdf.save()
+
+        elif file_type == 'application/vnd.oasis.opendocument.presentation':
+            # Convert LibreOffice to PDF (requires unoconv to be installed on the system)
+            os.system(f"unoconv -f pdf -o {output_pdf} {input_file}")
+
+        elif file_type == 'application/pdf':
+            # If it's already a PDF, just copy the file
+            with open(input_file, 'rb') as src, open(output_pdf, 'wb') as dst:
+                dst.write(src.read())
+
+        else:
+            raise ValueError(f"Unsupported file type for conversion: {file_type}")
+
+        logger.debug(f"Successfully converted {input_file} to PDF: {output_pdf}")
+    except Exception as e:
+        logger.error(f"Error converting file to PDF: {str(e)}", exc_info=True)
+        raise
 
 def process_file(input_data):
     logger.debug(f"Starting to process input: {input_data}")
@@ -20,23 +64,23 @@ def process_file(input_data):
         if isinstance(input_data, str) and (input_data.startswith('http://') or input_data.startswith('https://')):
             return process_url(input_data)
         else:
-            return process_local_file(input_data)
+            # Create a temporary PDF file
+            with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_pdf:
+                temp_pdf_path = temp_pdf.name
+
+            # Convert the input file to PDF
+            convert_to_pdf(input_data, temp_pdf_path)
+
+            # Process the resulting PDF file
+            result = process_pdf(temp_pdf_path)
+
+            # Clean up the temporary PDF file
+            os.unlink(temp_pdf_path)
+
+            return result
     except Exception as e:
         logger.error(f"Error in process_file: {str(e)}", exc_info=True)
         raise
-
-def process_local_file(filepath):
-    logger.debug(f"Processing local file: {filepath}")
-    file_type = magic.from_file(filepath, mime=True)
-    logger.debug(f"Detected file type: {file_type}")
-    if file_type == 'application/pdf':
-        return process_pdf(filepath)
-    elif file_type == 'application/vnd.openxmlformats-officedocument.presentationml.presentation':
-        return process_pptx(filepath)
-    elif file_type == 'application/vnd.oasis.opendocument.presentation':
-        return process_odp(filepath)
-    else:
-        raise ValueError(f"Unsupported file type: {file_type}. Supported types are PDF, PowerPoint (.pptx), and LibreOffice Presentation (.odp).")
 
 def process_url(url):
     logger.debug(f"Processing URL: {url}")

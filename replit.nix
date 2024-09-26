@@ -1,5 +1,7 @@
 {pkgs}: {
   deps = [
+    pkgs.poppler_utils
+    pkgs.glibcLocales
     pkgs.xcbuild
     pkgs.swig
     pkgs.openjpeg
