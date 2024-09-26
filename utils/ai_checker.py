@@ -10,6 +10,8 @@ logger = logging.getLogger(__name__)
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
+print(f"OPENAI_API_KEY is {'set' if OPENAI_API_KEY else 'not set'}")
+
 if not OPENAI_API_KEY:
     logger.warning("OPENAI_API_KEY is not set. AI checks will be skipped.")
     openai_client = None
@@ -18,8 +20,13 @@ else:
 
 def check_openai_connection():
     prompt = "This is a test connection. Please respond with 'Connected'."
-    response = send_openai_request(prompt, max_retries=3, base_delay=1, max_delay=5)
-    return response == "Connected"
+    try:
+        response = send_openai_request(prompt, max_retries=3, base_delay=1, max_delay=5)
+        print(f"OpenAI API response: {response}")
+        return response == "Connected"
+    except Exception as e:
+        print(f"Error connecting to OpenAI API: {str(e)}")
+        return False
 
 def run_ai_checks(slide_data):
     if not openai_client:
@@ -62,6 +69,7 @@ def send_openai_request(prompt: str, max_retries=10, base_delay=1, max_delay=120
     for attempt in range(max_retries):
         try:
             logger.debug(f"Sending request to OpenAI API (attempt {attempt + 1}/{max_retries})")
+            print(f"Using model: gpt-4o-mini")
             completion = openai_client.chat.completions.create(
                 model="gpt-4o-mini", messages=[{"role": "user", "content": prompt}], max_tokens=100
             )
@@ -70,19 +78,9 @@ def send_openai_request(prompt: str, max_retries=10, base_delay=1, max_delay=120
                 raise ValueError("OpenAI returned an empty response.")
             logger.debug("Successfully received response from OpenAI API")
             return content
-        except RateLimitError:
-            if attempt == max_retries - 1:
-                logger.error("Rate limit exceeded. Max retries reached.")
-                return "AI check failed: Rate limit exceeded. Please try again later."
-            delay = min(max_delay, (base_delay * 2 ** attempt) + random.uniform(0, 0.1 * (2 ** attempt)))
-            logger.warning(f"Rate limit hit. Retrying in {delay:.2f} seconds...")
-            time.sleep(delay)
-        except APIError as e:
-            logger.error(f"OpenAI API error: {str(e)}")
-            return f"AI check failed: OpenAI API error - {str(e)}"
         except Exception as e:
-            logger.error(f"Unexpected error: {str(e)}")
-            return f"AI check failed: Unexpected error - {str(e)}"
+            print(f"Error in send_openai_request: {str(e)}")
+            raise
 
 def check_title_slide(slide_data):
     first_slide_content = slide_data['content'][0] if slide_data['content'] else ""
