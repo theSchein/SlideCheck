@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conference Submissions Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Conference Submissions Dashboard</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Filename/URL</th>
+                    <th>Timestamp</th>
+                    <th>Results</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for submission in submissions %}
+                <tr>
+                    <td>{{ submission.id }}</td>
+                    <td>
+                        {% if submission.filename %}
+                            {{ submission.filename }}
+                        {% else %}
+                            <a href="{{ submission.url }}" target="_blank">{{ submission.url }}</a>
+                        {% endif %}
+                    </td>
+                    <td>{{ submission.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                    <td>
+                        <ul>
+                            {% for result in submission.results %}
+                            <li>
+                                <strong>{{ result.check }}:</strong>
+                                {% if result.passed %}
+                                    <span class="success">Passed</span>
+                                {% else %}
+                                    <span class="failure">Failed</span>
+                                {% endif %}
+                                - {{ result.message }}
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
