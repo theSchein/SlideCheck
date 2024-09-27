@@ -41,6 +41,7 @@ def index():
     if request.method == 'POST' and form.validate():
         try:
             logger.debug("Form submitted successfully")
+            temp_file_path = None
             if form.file.data:
                 logger.debug(f"Processing uploaded file: {form.file.data.filename}")
                 filename = secure_filename(form.file.data.filename)
@@ -63,9 +64,11 @@ def index():
                 logger.debug(f"File size: {file_size} bytes")
                 
                 slide_data = process_file(filepath)
+                temp_file_path = slide_data.get('temp_file_path')
             elif form.url.data:
                 logger.debug(f"Processing URL: {form.url.data}")
                 slide_data = process_file(form.url.data)
+                temp_file_path = slide_data.get('temp_file_path')
             
             logger.debug("File processing completed")
 
@@ -78,6 +81,12 @@ def index():
             response = jsonify({'status': 'Completed', 'results': all_results})
             response.headers['Content-Type'] = 'application/json'
             logger.debug(f"Sending response: {response.get_data(as_text=True)}")
+
+            # Clean up temporary file if it exists
+            if temp_file_path and os.path.exists(temp_file_path):
+                os.remove(temp_file_path)
+                logger.debug(f"Temporary file removed: {temp_file_path}")
+
             return response
 
         except Exception as e:

@@ -72,8 +72,8 @@ def process_file(input_data):
             # Process the resulting PDF file
             result = process_pdf(temp_pdf_path)
 
-            # Clean up the temporary PDF file
-            os.unlink(temp_pdf_path)
+            # Add the temporary file path to the result
+            result['temp_file_path'] = temp_pdf_path
 
             return result
     except Exception as e:
@@ -139,11 +139,9 @@ def process_google_slides(url):
         # Process the PDF
         result = process_pdf(temp_pdf_path)
         
-        # Add the original URL to the result
+        # Add the original URL and temporary file path to the result
         result['url'] = url
-        
-        # Clean up the temporary file
-        os.unlink(temp_pdf_path)
+        result['temp_file_path'] = temp_pdf_path
         
         return result
     except requests.RequestException as e:
