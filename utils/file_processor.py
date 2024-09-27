@@ -119,16 +119,28 @@ def process_google_slides(url):
     # Extract the presentation ID from the URL
     presentation_id = url.split('/')[-2]
 
+    # Check if the GOOGLE_CREDENTIALS_PATH environment variable is set
+    credentials_path = os.environ.get('GOOGLE_CREDENTIALS_PATH')
+    if not credentials_path:
+        logger.error("GOOGLE_CREDENTIALS_PATH environment variable is not set.")
+        return {
+            'type': 'google_slides',
+            'num_slides': 0,
+            'content': ["Error: Google Slides credentials not configured. Please set up Google Slides API credentials."],
+            'url': url
+        }
+
+    # Check if the credentials file exists
+    if not os.path.exists(credentials_path):
+        logger.error(f"Google credentials file not found at {credentials_path}")
+        return {
+            'type': 'google_slides',
+            'num_slides': 0,
+            'content': ["Error: Google Slides credentials file not found. Please check your GOOGLE_CREDENTIALS_PATH."],
+            'url': url
+        }
+
     try:
-        # Check if the GOOGLE_CREDENTIALS_PATH environment variable is set
-        credentials_path = os.environ.get('GOOGLE_CREDENTIALS_PATH')
-        if not credentials_path:
-            raise ValueError("GOOGLE_CREDENTIALS_PATH environment variable is not set.")
-        
-        # Check if the credentials file exists
-        if not os.path.exists(credentials_path):
-            raise FileNotFoundError(f"Google credentials file not found at {credentials_path}")
-        
         # Set up credentials
         creds = Credentials.from_authorized_user_file(credentials_path)
 
@@ -158,28 +170,17 @@ def process_google_slides(url):
             'content': content,
             'url': url
         }
-    except ValueError as ve:
-        logger.error(f"Google Slides authentication error: {str(ve)}")
-        return {
-            'type': 'google_slides',
-            'num_slides': 0,
-            'content': ["Error: Google Slides authentication not properly configured. Please set up the GOOGLE_CREDENTIALS_PATH environment variable."],
-            'url': url
-        }
-    except FileNotFoundError as fnf:
-        logger.error(f"Google Slides credentials file error: {str(fnf)}")
-        return {
-            'type': 'google_slides',
-            'num_slides': 0,
-            'content': ["Error: Google Slides credentials file not found. Please check the GOOGLE_CREDENTIALS_PATH environment variable."],
-            'url': url
-        }
     except Exception as e:
         logger.error(f"Error processing Google Slides: {str(e)}", exc_info=True)
+        error_message = f"Error processing Google Slides: {str(e)}"
+        if "invalid_grant" in str(e).lower():
+            error_message += " The credentials may have expired. Please refresh your Google Slides API credentials."
+        elif "accessnotconfigured" in str(e).lower():
+            error_message += " The Google Slides API may not be enabled for your project. Please enable it in the Google Cloud Console."
         return {
             'type': 'google_slides',
             'num_slides': 0,
-            'content': [f"Error processing Google Slides: {str(e)}"],
+            'content': [error_message],
             'url': url
         }
 
