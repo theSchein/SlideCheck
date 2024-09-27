@@ -93,7 +93,6 @@ def index():
                 form.file.data.save(filepath)
                 logger.debug(f"File saved: {filepath}")
                 
-                # Check if file exists and is readable
                 if not os.path.exists(filepath):
                     raise FileNotFoundError(f"File not found: {filepath}")
                 if not os.access(filepath, os.R_OK):
@@ -121,7 +120,6 @@ def index():
             all_results = deterministic_results + ai_results
             passed = all(result['passed'] for result in all_results)
 
-            # Save submission to database
             submission = Submission(filename=filename, url=url, results=all_results, passed=passed, conference_id=conference.id)
             db.session.add(submission)
             db.session.commit()
@@ -130,7 +128,6 @@ def index():
             response.headers['Content-Type'] = 'application/json'
             logger.debug(f"Sending response: {response.get_data(as_text=True)}")
 
-            # Clean up temporary file if it exists
             if temp_file_path and os.path.exists(temp_file_path):
                 os.remove(temp_file_path)
                 logger.debug(f"Temporary file removed: {temp_file_path}")
@@ -161,13 +158,8 @@ def update_admin_config():
     checks = request.form.getlist('checks')
     file_types = request.form.getlist('file_types')
     
-    # Here you would typically save these configurations to a database or file
-    # For now, we'll just log them
     logger.info(f"Updated checks: {checks}")
     logger.info(f"Updated file types: {file_types}")
-    
-    # Placeholder for configuration update logic
-    # You might want to update a database or a configuration file here
     
     return redirect(url_for('admin_dashboard'))
 
