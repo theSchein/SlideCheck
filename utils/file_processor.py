@@ -6,9 +6,7 @@ from odf import text, teletype
 from odf.opendocument import load
 import requests
 from bs4 import BeautifulSoup
-from urllib.parse import urlparse
-from googleapiclient.discovery import build
-from google.oauth2.credentials import Credentials
+from urllib.parse import urlparse, parse_qs
 import os
 import tempfile
 from reportlab.lib.pagesizes import letter
@@ -116,71 +114,52 @@ def process_canva(url):
 def process_google_slides(url):
     logger.debug(f"Processing Google Slides URL: {url}")
     
-    # Extract the presentation ID from the URL
-    presentation_id = url.split('/')[-2]
+    # Extract the file ID from the URL
+    parsed_url = urlparse(url)
+    file_id = parse_qs(parsed_url.query).get('id', [None])[0]
+    if not file_id:
+        file_id = parsed_url.path.split('/')[-2]
+    
+    if not file_id:
+        raise ValueError("Could not extract file ID from the Google Slides URL")
 
-    # Check if the GOOGLE_CREDENTIALS_PATH environment variable is set
-    credentials_path = os.environ.get('GOOGLE_CREDENTIALS_PATH')
-    if not credentials_path:
-        logger.error("GOOGLE_CREDENTIALS_PATH environment variable is not set.")
-        return {
-            'type': 'google_slides',
-            'num_slides': 0,
-            'content': ["Error: Google Slides credentials not configured. Please set up Google Slides API credentials."],
-            'url': url
-        }
-
-    # Check if the credentials file exists
-    if not os.path.exists(credentials_path):
-        logger.error(f"Google credentials file not found at {credentials_path}")
-        return {
-            'type': 'google_slides',
-            'num_slides': 0,
-            'content': ["Error: Google Slides credentials file not found. Please check your GOOGLE_CREDENTIALS_PATH."],
-            'url': url
-        }
-
+    # Construct the export URL
+    export_url = f"https://docs.google.com/presentation/d/{file_id}/export/pdf"
+    
     try:
-        # Set up credentials
-        creds = Credentials.from_authorized_user_file(credentials_path)
-
-        # Build the Google Slides API service
-        service = build('slides', 'v1', credentials=creds)
-
-        # Call the Slides API
-        presentation = service.presentations().get(presentationId=presentation_id).execute()
-        slides = presentation.get('slides', [])
-
-        num_slides = len(slides)
-        content = []
-
-        for slide in slides:
-            slide_content = ""
-            for element in slide.get('pageElements', []):
-                if 'shape' in element and 'text' in element['shape']:
-                    for textElement in element['shape']['text'].get('textElements', []):
-                        if 'textRun' in textElement:
-                            slide_content += textElement['textRun']['content']
-            content.append(slide_content)
-
-        logger.debug(f"Successfully processed Google Slides presentation with {num_slides} slides")
+        # Download the PDF
+        response = requests.get(export_url)
+        response.raise_for_status()  # Raise an exception for bad responses
+        
+        # Save to a temporary file
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_pdf:
+            temp_pdf.write(response.content)
+            temp_pdf_path = temp_pdf.name
+        
+        # Process the PDF
+        result = process_pdf(temp_pdf_path)
+        
+        # Add the original URL to the result
+        result['url'] = url
+        
+        # Clean up the temporary file
+        os.unlink(temp_pdf_path)
+        
+        return result
+    except requests.RequestException as e:
+        logger.error(f"Error downloading Google Slides PDF: {str(e)}", exc_info=True)
         return {
             'type': 'google_slides',
-            'num_slides': num_slides,
-            'content': content,
+            'num_slides': 0,
+            'content': [f"Error processing Google Slides: {str(e)}"],
             'url': url
         }
     except Exception as e:
         logger.error(f"Error processing Google Slides: {str(e)}", exc_info=True)
-        error_message = f"Error processing Google Slides: {str(e)}"
-        if "invalid_grant" in str(e).lower():
-            error_message += " The credentials may have expired. Please refresh your Google Slides API credentials."
-        elif "accessnotconfigured" in str(e).lower():
-            error_message += " The Google Slides API may not be enabled for your project. Please enable it in the Google Cloud Console."
         return {
             'type': 'google_slides',
             'num_slides': 0,
-            'content': [error_message],
+            'content': [f"Error processing Google Slides: {str(e)}"],
             'url': url
         }
 
