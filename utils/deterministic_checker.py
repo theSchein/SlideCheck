@@ -1,4 +1,5 @@
 import PyPDF2
+import re
 
 def run_deterministic_checks(slide_data, conference):
     results = []
@@ -35,6 +36,12 @@ def run_deterministic_checks(slide_data, conference):
         'message': f'All required sections found.' if len(missing_sections) == 0 else f'Missing sections: {", ".join(missing_sections)}'
     })
 
+    # Conference-specific checks
+    if conference.name == "TechCon 2024":
+        results.append(check_code_snippets(all_text))
+    elif conference.name == "DataSummit 2024":
+        results.append(check_data_visualization(all_text))
+
     # Check for fonts (placeholder - actual implementation would depend on file type)
     results.append({
         'check': 'Font usage',
@@ -62,14 +69,12 @@ def check_image_presence(slide_data):
     if file_type == 'pdf' and file_path:
         return check_for_images_pdf(file_path)
     elif file_type in ['canva', 'google_slides']:
-        # For now, we'll assume Canva and Google Slides always have images
         return {
             'check': 'Image Presence',
             'passed': True,
             'message': f'The {file_type} presentation likely contains images.'
         }
     else:
-        # Fallback to keyword-based check for other file types
         image_keywords = ['image', 'picture', 'photo', 'figure', 'diagram', 'graph', 'chart']
         all_text = ' '.join(slide_data['content']).lower()
         has_images = any(keyword in all_text for keyword in image_keywords)
@@ -95,4 +100,33 @@ def check_for_images_pdf(file_path):
         'check': 'Image Presence',
         'passed': has_images,
         'message': 'The PDF contains images.' if has_images else 'No images detected in the PDF.'
+    }
+
+def check_code_snippets(text):
+    code_patterns = [
+        r'\bdef\s+\w+\s*\(.*\):',  # Python function definition
+        r'\bclass\s+\w+:',  # Python class definition
+        r'\bif\s+.*:',  # Python if statement
+        r'\bfor\s+.*:',  # Python for loop
+        r'\bwhile\s+.*:',  # Python while loop
+        r'\bfunction\s+\w+\s*\(.*\)\s*{',  # JavaScript function
+        r'\bconst\s+\w+\s*=',  # JavaScript const declaration
+        r'\blet\s+\w+\s*=',  # JavaScript let declaration
+        r'\bvar\s+\w+\s*=',  # JavaScript var declaration
+    ]
+    
+    has_code = any(re.search(pattern, text, re.IGNORECASE) for pattern in code_patterns)
+    return {
+        'check': 'Code Snippets',
+        'passed': has_code,
+        'message': 'The presentation contains code snippets.' if has_code else 'No code snippets detected in the presentation.'
+    }
+
+def check_data_visualization(text):
+    viz_keywords = ['chart', 'graph', 'plot', 'diagram', 'visualization', 'dashboard']
+    has_viz = any(keyword in text.lower() for keyword in viz_keywords)
+    return {
+        'check': 'Data Visualization',
+        'passed': has_viz,
+        'message': 'The presentation includes data visualizations.' if has_viz else 'No data visualizations detected in the presentation.'
     }
