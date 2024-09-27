@@ -2,7 +2,7 @@ import os
 import logging
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session, send_file
 from flask_wtf import FlaskForm
-from wtforms import FileField, StringField, SubmitField
+from wtforms import FileField, StringField, SubmitField, SelectField
 from wtforms.validators import DataRequired, URL, Optional
 from werkzeug.utils import secure_filename
 from utils.file_processor import process_file
@@ -30,6 +30,12 @@ logger = logging.getLogger(__name__)
 # Initialize OpenAI client
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
+class Conference(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    max_slides = db.Column(db.Integer, nullable=False)
+    required_sections = db.Column(db.String(500), nullable=True)
+
 class Submission(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     filename = db.Column(db.String(100), nullable=True)
@@ -37,10 +43,13 @@ class Submission(db.Model):
     results = db.Column(db.JSON, nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     passed = db.Column(db.Boolean, default=False)
+    conference_id = db.Column(db.Integer, db.ForeignKey('conference.id'), nullable=False)
+    conference = db.relationship('Conference', backref=db.backref('submissions', lazy=True))
 
 class SlideForm(FlaskForm):
     file = FileField('Upload Slide Deck (PDF, PPTX, ODP)', validators=[Optional()])
     url = StringField('Or enter Canva or Google Slides URL', validators=[Optional(), URL()])
+    conference = SelectField('Select Conference', coerce=int, validators=[DataRequired()])
     submit = SubmitField('Validate')
 
     def validate(self):
@@ -65,6 +74,7 @@ def admin_required(f):
 @app.route('/', methods=['GET', 'POST'])
 def index():
     form = SlideForm()
+    form.conference.choices = [(c.id, c.name) for c in Conference.query.all()]
     if request.method == 'POST' and form.validate():
         try:
             logger.debug("Form submitted successfully")
@@ -102,16 +112,17 @@ def index():
             
             logger.debug("File processing completed")
 
-            deterministic_results = run_deterministic_checks(slide_data)
+            conference = Conference.query.get(form.conference.data)
+            deterministic_results = run_deterministic_checks(slide_data, conference)
             logger.debug("Deterministic checks completed")
-            ai_results = run_ai_checks(slide_data)
+            ai_results = run_ai_checks(slide_data, conference)
             logger.debug("AI checks completed")
 
             all_results = deterministic_results + ai_results
             passed = all(result['passed'] for result in all_results)
 
             # Save submission to database
-            submission = Submission(filename=filename, url=url, results=all_results, passed=passed)
+            submission = Submission(filename=filename, url=url, results=all_results, passed=passed, conference_id=conference.id)
             db.session.add(submission)
             db.session.commit()
 
@@ -259,11 +270,14 @@ def handle_exception(e):
 def init_db():
     with app.app_context():
         db.create_all()
-        # Check if the 'passed' column exists, if not, add it
-        inspector = db.inspect(db.engine)
-        if 'passed' not in [c['name'] for c in inspector.get_columns('submission')]:
-            with db.engine.connect() as conn:
-                conn.execute(db.text('ALTER TABLE submission ADD COLUMN passed BOOLEAN DEFAULT FALSE'))
+        # Add sample conferences if they don't exist
+        if Conference.query.count() == 0:
+            sample_conferences = [
+                Conference(name="TechCon 2024", max_slides=15, required_sections="Introduction,Methodology,Results,Conclusion"),
+                Conference(name="DataSummit 2024", max_slides=20, required_sections="Abstract,Data Analysis,Findings,Future Work"),
+            ]
+            db.session.add_all(sample_conferences)
+            db.session.commit()
 
 # Call init_db() function
 init_db()

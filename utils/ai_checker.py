@@ -14,7 +14,7 @@ logger.debug(f"Initializing OpenAI client with API key: {'[REDACTED]' if OPENAI_
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 
-def run_ai_checks(slide_data):
+def run_ai_checks(slide_data, conference):
     if not OPENAI_API_KEY:
         return [{
             'check': 'AI Checks',
@@ -31,6 +31,11 @@ def run_ai_checks(slide_data):
 
     bullet_point_check = check_bullet_point_density(slide_data)
     results.append(bullet_point_check)
+
+    time.sleep(2)
+
+    content_relevance_check = check_content_relevance(slide_data, conference)
+    results.append(content_relevance_check)
 
     return results
 
@@ -128,4 +133,29 @@ def check_bullet_point_density(slide_data):
         'check': 'Bullet Point Density',
         'passed': not is_text_heavy,
         'message': 'The slides have a good balance of text and visuals.' if not is_text_heavy else 'The slides may be too text-heavy or have too many bullet points.'
+    }
+
+def check_content_relevance(slide_data, conference):
+    all_text = ' '.join(slide_data['content'])
+    prompt = (
+        f"You are an assistant that evaluates slide content for relevance to a conference.\n"
+        f"The conference name is '{conference.name}'.\n"
+        f"Determine if the slide content is relevant to this conference.\n"
+        f"Answer with 'Yes' or 'No' only.\n\n"
+        f"Slide Content:\n{all_text[:1500]}"
+    )
+    response = send_openai_request_with_function(prompt)
+
+    if response.startswith("AI check failed"):
+        return {
+            'check': 'Content Relevance',
+            'passed': False,
+            'message': response
+        }
+
+    is_relevant = response.lower() == 'yes'
+    return {
+        'check': 'Content Relevance',
+        'passed': is_relevant,
+        'message': f'The content is relevant to {conference.name}.' if is_relevant else f'The content may not be relevant to {conference.name}.'
     }

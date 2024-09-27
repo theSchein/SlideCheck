@@ -1,6 +1,6 @@
 import PyPDF2
 
-def run_deterministic_checks(slide_data):
+def run_deterministic_checks(slide_data, conference):
     results = []
 
     # Check file type
@@ -15,8 +15,24 @@ def run_deterministic_checks(slide_data):
     num_slides = slide_data['num_slides']
     results.append({
         'check': 'Number of slides',
-        'passed': 5 <= num_slides <= 15,
-        'message': f'The deck has {num_slides} slides. Ideal range is 5-15 slides.'
+        'passed': num_slides <= conference.max_slides,
+        'message': f'The deck has {num_slides} slides. Maximum allowed for this conference is {conference.max_slides} slides.'
+    })
+
+    # Check for required sections
+    required_sections = conference.required_sections.split(',') if conference.required_sections else []
+    found_sections = set()
+    all_text = ' '.join(slide_data['content']).lower()
+    
+    for section in required_sections:
+        if section.lower() in all_text:
+            found_sections.add(section)
+    
+    missing_sections = set(required_sections) - found_sections
+    results.append({
+        'check': 'Required sections',
+        'passed': len(missing_sections) == 0,
+        'message': f'All required sections found.' if len(missing_sections) == 0 else f'Missing sections: {", ".join(missing_sections)}'
     })
 
     # Check for fonts (placeholder - actual implementation would depend on file type)
