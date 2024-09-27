@@ -256,7 +256,17 @@ def handle_exception(e):
     logger.error(f"Unhandled exception: {str(e)}", exc_info=True)
     return jsonify({'error': str(e)}), 500
 
-if __name__ == '__main__':
+def init_db():
     with app.app_context():
         db.create_all()
+        # Check if the 'passed' column exists, if not, add it
+        inspector = db.inspect(db.engine)
+        if 'passed' not in [c['name'] for c in inspector.get_columns('submission')]:
+            with db.engine.connect() as conn:
+                conn.execute(db.text('ALTER TABLE submission ADD COLUMN passed BOOLEAN DEFAULT FALSE'))
+
+# Call init_db() function
+init_db()
+
+if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
