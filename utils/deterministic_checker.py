@@ -1,5 +1,6 @@
 import PyPDF2
 import re
+import json
 
 def run_deterministic_checks(slide_data, conference):
     results = []
@@ -37,12 +38,19 @@ def run_deterministic_checks(slide_data, conference):
     })
 
     # Conference-specific checks
-    if conference.name == "TechCon 2024":
-        results.append(check_code_snippets(all_text))
-        results.append(check_technical_terminology(all_text))
-    elif conference.name == "DataSummit 2024":
-        results.append(check_data_visualization(all_text))
-        results.append(check_statistical_terms(all_text))
+    custom_checks = json.loads(conference.custom_checks) if conference.custom_checks else {}
+    
+    if custom_checks.get('code_snippets', {}).get('enabled', False):
+        results.append(check_code_snippets(all_text, custom_checks['code_snippets']['threshold']))
+    
+    if custom_checks.get('technical_terminology', {}).get('enabled', False):
+        results.append(check_technical_terminology(all_text, custom_checks['technical_terminology']['threshold']))
+    
+    if custom_checks.get('data_visualization', {}).get('enabled', False):
+        results.append(check_data_visualization(all_text, custom_checks['data_visualization']['threshold']))
+    
+    if custom_checks.get('statistical_terms', {}).get('enabled', False):
+        results.append(check_statistical_terms(all_text, custom_checks['statistical_terms']['threshold']))
 
     # Check for fonts (placeholder - actual implementation would depend on file type)
     results.append({
@@ -104,7 +112,7 @@ def check_for_images_pdf(file_path):
         'message': 'The PDF contains images.' if has_images else 'No images detected in the PDF.'
     }
 
-def check_code_snippets(text):
+def check_code_snippets(text, threshold):
     code_patterns = [
         r'\bdef\s+\w+\s*\(.*\):',  # Python function definition
         r'\bclass\s+\w+:',  # Python class definition
@@ -117,38 +125,40 @@ def check_code_snippets(text):
         r'\bvar\s+\w+\s*=',  # JavaScript var declaration
     ]
     
-    has_code = any(re.search(pattern, text, re.IGNORECASE) for pattern in code_patterns)
+    code_snippet_count = sum(1 for pattern in code_patterns if re.search(pattern, text, re.IGNORECASE))
+    has_code = code_snippet_count >= threshold
     return {
         'check': 'Code Snippets',
         'passed': has_code,
-        'message': 'The presentation contains code snippets.' if has_code else 'No code snippets detected in the presentation.'
+        'message': f'The presentation contains {code_snippet_count} code snippet(s). Threshold: {threshold}.'
     }
 
-def check_data_visualization(text):
+def check_data_visualization(text, threshold):
     viz_keywords = ['chart', 'graph', 'plot', 'diagram', 'visualization', 'dashboard']
-    has_viz = any(keyword in text.lower() for keyword in viz_keywords)
+    viz_count = sum(1 for keyword in viz_keywords if keyword in text.lower())
+    has_viz = viz_count >= threshold
     return {
         'check': 'Data Visualization',
         'passed': has_viz,
-        'message': 'The presentation includes data visualizations.' if has_viz else 'No data visualizations detected in the presentation.'
+        'message': f'The presentation includes {viz_count} data visualization keyword(s). Threshold: {threshold}.'
     }
 
-def check_technical_terminology(text):
+def check_technical_terminology(text, threshold):
     tech_terms = ['algorithm', 'api', 'database', 'framework', 'machine learning', 'cloud computing', 'blockchain', 'cybersecurity', 'artificial intelligence', 'iot']
     found_terms = [term for term in tech_terms if term in text.lower()]
-    has_tech_terms = len(found_terms) >= 3
+    has_tech_terms = len(found_terms) >= threshold
     return {
         'check': 'Technical Terminology',
         'passed': has_tech_terms,
-        'message': f'The presentation includes technical terms: {", ".join(found_terms)}.' if has_tech_terms else 'Insufficient technical terminology found in the presentation.'
+        'message': f'The presentation includes {len(found_terms)} technical term(s): {", ".join(found_terms)}. Threshold: {threshold}.'
     }
 
-def check_statistical_terms(text):
+def check_statistical_terms(text, threshold):
     stat_terms = ['mean', 'median', 'mode', 'standard deviation', 'variance', 'regression', 'correlation', 'p-value', 'confidence interval', 'hypothesis test']
     found_terms = [term for term in stat_terms if term in text.lower()]
-    has_stat_terms = len(found_terms) >= 3
+    has_stat_terms = len(found_terms) >= threshold
     return {
         'check': 'Statistical Terms',
         'passed': has_stat_terms,
-        'message': f'The presentation includes statistical terms: {", ".join(found_terms)}.' if has_stat_terms else 'Insufficient statistical terminology found in the presentation.'
+        'message': f'The presentation includes {len(found_terms)} statistical term(s): {", ".join(found_terms)}. Threshold: {threshold}.'
     }

@@ -14,6 +14,7 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 from PyPDF2 import PdfMerger
 import io
+import json
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.urandom(24)
@@ -35,6 +36,7 @@ class Conference(db.Model):
     name = db.Column(db.String(100), nullable=False)
     max_slides = db.Column(db.Integer, nullable=False)
     required_sections = db.Column(db.String(500), nullable=True)
+    custom_checks = db.Column(db.JSON, nullable=True)
 
 class Submission(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -137,21 +139,33 @@ def admin_login():
     # Placeholder for now, we'll implement proper login later
     session['admin'] = True
     logger.info("Admin logged in successfully")
-    return redirect(url_for('dashboard'))
+    return redirect(url_for('admin_dashboard'))
 
 @app.route('/admin')
 @admin_required
 def admin_dashboard():
-    return render_template('admin.html')
+    conferences = Conference.query.all()
+    return render_template('admin.html', conferences=conferences)
 
-@app.route('/admin/update_config', methods=['POST'])
+@app.route('/admin/update_conference/<int:conference_id>', methods=['POST'])
 @admin_required
-def update_admin_config():
-    checks = request.form.getlist('checks')
-    file_types = request.form.getlist('file_types')
+def update_conference_config(conference_id):
+    conference = Conference.query.get_or_404(conference_id)
     
-    logger.info(f"Updated checks: {checks}")
-    logger.info(f"Updated file types: {file_types}")
+    conference.max_slides = int(request.form['max_slides'])
+    conference.required_sections = request.form['required_sections']
+    
+    custom_checks = {}
+    for check in ['code_snippets', 'technical_terminology', 'data_visualization', 'statistical_terms']:
+        custom_checks[check] = {
+            'enabled': check in request.form.getlist('checks'),
+            'threshold': int(request.form[f'{check}_threshold'])
+        }
+    
+    conference.custom_checks = json.dumps(custom_checks)
+    
+    db.session.commit()
+    logger.info(f"Updated configuration for conference: {conference.name}")
     
     return redirect(url_for('admin_dashboard'))
 
@@ -263,11 +277,34 @@ def init_db():
                 conn.execute(db.text('ALTER TABLE submission ADD COLUMN conference_id INTEGER'))
                 conn.commit()
         
+        # Check if custom_checks column exists in conference table
+        if 'custom_checks' not in [c['name'] for c in inspector.get_columns('conference')]:
+            # Add custom_checks column
+            with db.engine.connect() as conn:
+                conn.execute(db.text('ALTER TABLE conference ADD COLUMN custom_checks JSON'))
+                conn.commit()
+        
         # Add sample conferences if they don't exist
         if Conference.query.count() == 0:
             sample_conferences = [
-                Conference(name="TechCon 2024", max_slides=15, required_sections="Introduction,Methodology,Results,Conclusion"),
-                Conference(name="DataSummit 2024", max_slides=20, required_sections="Abstract,Data Analysis,Findings,Future Work"),
+                Conference(
+                    name="TechCon 2024",
+                    max_slides=15,
+                    required_sections="Introduction,Methodology,Results,Conclusion",
+                    custom_checks=json.dumps({
+                        "code_snippets": {"enabled": True, "threshold": 1},
+                        "technical_terminology": {"enabled": True, "threshold": 3}
+                    })
+                ),
+                Conference(
+                    name="DataSummit 2024",
+                    max_slides=20,
+                    required_sections="Abstract,Data Analysis,Findings,Future Work",
+                    custom_checks=json.dumps({
+                        "data_visualization": {"enabled": True, "threshold": 1},
+                        "statistical_terms": {"enabled": True, "threshold": 3}
+                    })
+                ),
             ]
             db.session.add_all(sample_conferences)
             db.session.commit()
