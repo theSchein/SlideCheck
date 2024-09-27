@@ -1,6 +1,6 @@
 import os
 import logging
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from flask_wtf import FlaskForm
 from wtforms import FileField, StringField, SubmitField
 from wtforms.validators import DataRequired, URL, Optional
@@ -9,6 +9,7 @@ from utils.file_processor import process_file
 from utils.deterministic_checker import run_deterministic_checks
 from utils.ai_checker import run_ai_checks
 from openai import OpenAI
+from functools import wraps
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.urandom(24)
@@ -34,6 +35,14 @@ class SlideForm(FlaskForm):
             self.url.errors.append('Please either upload a file or provide a URL.')
             return False
         return True
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'admin' not in session:
+            return redirect(url_for('admin_login'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -94,6 +103,17 @@ def index():
             return jsonify({'error': str(e)}), 500
 
     return render_template('index.html', form=form)
+
+@app.route('/admin/login')
+def admin_login():
+    # Placeholder for now, we'll implement proper login later
+    session['admin'] = True
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin')
+@admin_required
+def admin_dashboard():
+    return render_template('admin.html')
 
 @app.errorhandler(Exception)
 def handle_exception(e):

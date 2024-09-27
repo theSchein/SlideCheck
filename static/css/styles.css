@@ -63,3 +63,16 @@ input[type="submit"]:hover {
     background-color: #4CAF50;
     transition: width 0.5s;
 }
+
+/* Admin styles */
+.admin-form {
+    margin-bottom: 20px;
+}
+.admin-form label {
+    display: block;
+    margin-bottom: 5px;
+}
+.admin-form input[type="text"],
+.admin-form input[type="checkbox"] {
+    margin-bottom: 10px;
+}
