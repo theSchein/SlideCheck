@@ -18,18 +18,14 @@ document.addEventListener('DOMContentLoaded', function() {
             method: 'POST',
             body: formData
         })
-        .then(response => {
-            if (!response.ok) {
-                return response.json().then(data => {
-                    throw new Error(data.error || `HTTP error! status: ${response.status}`);
-                });
-            }
-            return response.json();
-        })
+        .then(response => response.json())
         .then(data => {
             loadingBar.style.width = '100%';
-            if (!data || !data.results || data.results.length === 0) {
-                throw new Error('Empty or invalid JSON response');
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            if (!data.results || data.results.length === 0) {
+                throw new Error('No results returned from the server');
             }
             data.results.forEach(result => {
                 const resultItem = document.createElement('div');

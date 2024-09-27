@@ -84,29 +84,20 @@ def index():
             if form.file.data:
                 logger.debug(f"Processing uploaded file: {form.file.data.filename}")
                 filename = secure_filename(form.file.data.filename)
-                allowed_extensions = {'pdf', 'pptx', 'odp'}
-                file_extension = filename.rsplit('.', 1)[1].lower()
-                if file_extension not in allowed_extensions:
-                    raise ValueError(f"Unsupported file type: .{file_extension}. Supported types are PDF, PowerPoint (.pptx), and LibreOffice Presentation (.odp).")
-                
                 filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
                 form.file.data.save(filepath)
                 logger.debug(f"File saved: {filepath}")
                 
-                if not os.path.exists(filepath):
-                    raise FileNotFoundError(f"File not found: {filepath}")
-                if not os.access(filepath, os.R_OK):
-                    raise PermissionError(f"File not readable: {filepath}")
-                
-                file_size = os.path.getsize(filepath)
-                logger.debug(f"File size: {file_size} bytes")
-                
                 slide_data = process_file(filepath)
+                if 'error' in slide_data:
+                    return jsonify({'error': slide_data['error']}), 400
                 temp_file_path = slide_data.get('temp_file_path')
             elif form.url.data:
                 logger.debug(f"Processing URL: {form.url.data}")
                 url = form.url.data
                 slide_data = process_file(url)
+                if 'error' in slide_data:
+                    return jsonify({'error': slide_data['error']}), 400
                 temp_file_path = slide_data.get('temp_file_path')
             
             logger.debug("File processing completed")

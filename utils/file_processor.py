@@ -62,6 +62,12 @@ def process_file(input_data):
         if isinstance(input_data, str) and (input_data.startswith('http://') or input_data.startswith('https://')):
             return process_url(input_data)
         else:
+            # Check file type
+            file_type = magic.from_file(input_data, mime=True)
+            allowed_types = ['application/pdf', 'application/vnd.openxmlformats-officedocument.presentationml.presentation', 'application/vnd.oasis.opendocument.presentation']
+            if file_type not in allowed_types:
+                raise ValueError(f"Unsupported file type: {file_type}")
+
             # Create a temporary PDF file
             with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_pdf:
                 temp_pdf_path = temp_pdf.name
@@ -76,9 +82,12 @@ def process_file(input_data):
             result['temp_file_path'] = temp_pdf_path
 
             return result
-    except Exception as e:
+    except ValueError as e:
         logger.error(f"Error in process_file: {str(e)}", exc_info=True)
-        raise
+        return {'error': str(e)}
+    except Exception as e:
+        logger.error(f"Unexpected error in process_file: {str(e)}", exc_info=True)
+        return {'error': 'An unexpected error occurred while processing the file'}
 
 def process_url(url):
     logger.debug(f"Processing URL: {url}")
