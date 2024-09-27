@@ -39,8 +39,10 @@ def run_deterministic_checks(slide_data, conference):
     # Conference-specific checks
     if conference.name == "TechCon 2024":
         results.append(check_code_snippets(all_text))
+        results.append(check_technical_terminology(all_text))
     elif conference.name == "DataSummit 2024":
         results.append(check_data_visualization(all_text))
+        results.append(check_statistical_terms(all_text))
 
     # Check for fonts (placeholder - actual implementation would depend on file type)
     results.append({
@@ -129,4 +131,24 @@ def check_data_visualization(text):
         'check': 'Data Visualization',
         'passed': has_viz,
         'message': 'The presentation includes data visualizations.' if has_viz else 'No data visualizations detected in the presentation.'
+    }
+
+def check_technical_terminology(text):
+    tech_terms = ['algorithm', 'api', 'database', 'framework', 'machine learning', 'cloud computing', 'blockchain', 'cybersecurity', 'artificial intelligence', 'iot']
+    found_terms = [term for term in tech_terms if term in text.lower()]
+    has_tech_terms = len(found_terms) >= 3
+    return {
+        'check': 'Technical Terminology',
+        'passed': has_tech_terms,
+        'message': f'The presentation includes technical terms: {", ".join(found_terms)}.' if has_tech_terms else 'Insufficient technical terminology found in the presentation.'
+    }
+
+def check_statistical_terms(text):
+    stat_terms = ['mean', 'median', 'mode', 'standard deviation', 'variance', 'regression', 'correlation', 'p-value', 'confidence interval', 'hypothesis test']
+    found_terms = [term for term in stat_terms if term in text.lower()]
+    has_stat_terms = len(found_terms) >= 3
+    return {
+        'check': 'Statistical Terms',
+        'passed': has_stat_terms,
+        'message': f'The presentation includes statistical terms: {", ".join(found_terms)}.' if has_stat_terms else 'Insufficient statistical terminology found in the presentation.'
     }

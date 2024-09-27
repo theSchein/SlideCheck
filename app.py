@@ -105,6 +105,7 @@ def index():
             conference = Conference.query.get(form.conference.data)
             deterministic_results = run_deterministic_checks(slide_data, conference)
             logger.debug("Deterministic checks completed")
+            logger.debug(f"Deterministic check results: {deterministic_results}")
             ai_results = run_ai_checks(slide_data, conference)
             logger.debug("AI checks completed")
 
@@ -253,6 +254,15 @@ def handle_exception(e):
 def init_db():
     with app.app_context():
         db.create_all()
+        
+        # Check if conference_id column exists in submission table
+        inspector = db.inspect(db.engine)
+        if 'conference_id' not in [c['name'] for c in inspector.get_columns('submission')]:
+            # Add conference_id column
+            with db.engine.connect() as conn:
+                conn.execute(db.text('ALTER TABLE submission ADD COLUMN conference_id INTEGER'))
+                conn.commit()
+        
         # Add sample conferences if they don't exist
         if Conference.query.count() == 0:
             sample_conferences = [
