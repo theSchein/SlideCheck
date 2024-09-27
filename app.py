@@ -1,6 +1,6 @@
 import os
 import logging
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session, send_file
 from flask_wtf import FlaskForm
 from wtforms import FileField, StringField, SubmitField
 from wtforms.validators import DataRequired, URL, Optional
@@ -12,6 +12,8 @@ from openai import OpenAI
 from functools import wraps
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
+from PyPDF2 import PdfMerger
+import io
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.urandom(24)
@@ -34,6 +36,7 @@ class Submission(db.Model):
     url = db.Column(db.String(200), nullable=True)
     results = db.Column(db.JSON, nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    passed = db.Column(db.Boolean, default=False)
 
 class SlideForm(FlaskForm):
     file = FileField('Upload Slide Deck (PDF, PPTX, ODP)', validators=[Optional()])
@@ -52,7 +55,9 @@ class SlideForm(FlaskForm):
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        logger.debug(f"Checking admin session: {session.get('admin')}")
         if 'admin' not in session:
+            logger.warning("Admin session not found, redirecting to login")
             return redirect(url_for('admin_login'))
         return f(*args, **kwargs)
     return decorated_function
@@ -103,9 +108,10 @@ def index():
             logger.debug("AI checks completed")
 
             all_results = deterministic_results + ai_results
+            passed = all(result['passed'] for result in all_results)
 
             # Save submission to database
-            submission = Submission(filename=filename, url=url, results=all_results)
+            submission = Submission(filename=filename, url=url, results=all_results, passed=passed)
             db.session.add(submission)
             db.session.commit()
 
@@ -130,7 +136,8 @@ def index():
 def admin_login():
     # Placeholder for now, we'll implement proper login later
     session['admin'] = True
-    return redirect(url_for('admin_dashboard'))
+    logger.info("Admin logged in successfully")
+    return redirect(url_for('dashboard'))
 
 @app.route('/admin')
 @admin_required
@@ -156,8 +163,93 @@ def update_admin_config():
 @app.route('/dashboard')
 @admin_required
 def dashboard():
-    submissions = Submission.query.order_by(Submission.timestamp.desc()).all()
-    return render_template('dashboard.html', submissions=submissions)
+    try:
+        logger.debug("Accessing dashboard route")
+        page = request.args.get('page', 1, type=int)
+        per_page = 10
+        submissions = Submission.query.order_by(Submission.timestamp.desc()).paginate(page=page, per_page=per_page, error_out=False)
+        
+        total_submissions = Submission.query.count()
+        passed_submissions = Submission.query.filter_by(passed=True).count()
+        pending_submissions = total_submissions - passed_submissions
+
+        logger.debug(f"Dashboard accessed. Total submissions: {total_submissions}, Passed: {passed_submissions}, Pending: {pending_submissions}")
+
+        return render_template('dashboard.html', 
+                               submissions=submissions,
+                               total_submissions=total_submissions,
+                               passed_submissions=passed_submissions,
+                               pending_submissions=pending_submissions)
+    except Exception as e:
+        logger.error(f"Error in dashboard route: {str(e)}", exc_info=True)
+        return render_template('error.html', error_message="An error occurred while loading the dashboard. Please try again later."), 500
+
+@app.route('/api/submissions')
+@admin_required
+def api_submissions():
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+    filter_type = request.args.get('filter', 'all')
+
+    query = Submission.query
+
+    if filter_type == 'passed':
+        query = query.filter_by(passed=True)
+    elif filter_type == 'failed':
+        query = query.filter_by(passed=False)
+
+    submissions = query.order_by(Submission.timestamp.desc()).paginate(page=page, per_page=per_page, error_out=False)
+
+    submissions_data = [{
+        'id': s.id,
+        'filename': s.filename,
+        'url': s.url,
+        'timestamp': s.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+        'passed': s.passed
+    } for s in submissions.items]
+
+    return jsonify({
+        'submissions': submissions_data,
+        'total_pages': submissions.pages,
+        'current_page': page
+    })
+
+@app.route('/api/submission/<int:submission_id>')
+@admin_required
+def api_submission_details(submission_id):
+    submission = Submission.query.get_or_404(submission_id)
+    return jsonify({
+        'id': submission.id,
+        'filename': submission.filename,
+        'url': submission.url,
+        'timestamp': submission.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+        'passed': submission.passed,
+        'results': submission.results
+    })
+
+@app.route('/download_master_deck')
+@admin_required
+def download_master_deck():
+    passed_submissions = Submission.query.filter_by(passed=True).all()
+    merger = PdfMerger()
+
+    for submission in passed_submissions:
+        if submission.filename and submission.filename.lower().endswith('.pdf'):
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], submission.filename)
+            if os.path.exists(file_path):
+                merger.append(file_path)
+
+    output = io.BytesIO()
+    merger.write(output)
+    output.seek(0)
+    merger.close()
+
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name='master_deck.pdf',
+        mimetype='application/pdf'
+    )
 
 @app.errorhandler(Exception)
 def handle_exception(e):

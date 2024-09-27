@@ -9,18 +9,36 @@
 <body>
     <div class="container">
         <h1>Conference Submissions Dashboard</h1>
+        
+        <div id="summary">
+            <h2>Summary</h2>
+            <p>Total Submissions: <span id="total-submissions">{{ total_submissions }}</span></p>
+            <p>Passed All Checks: <span id="passed-submissions">{{ passed_submissions }}</span></p>
+            <p>Pending Review: <span id="pending-submissions">{{ pending_submissions }}</span></p>
+        </div>
+        
+        <div id="filters">
+            <h2>Filters</h2>
+            <button onclick="filterSubmissions('all')">All Submissions</button>
+            <button onclick="filterSubmissions('passed')">Passed Submissions</button>
+            <button onclick="filterSubmissions('failed')">Failed Submissions</button>
+        </div>
+        
+        <button id="download-master-deck" onclick="downloadMasterDeck()">Download Master Deck</button>
+        
         <table>
             <thead>
                 <tr>
                     <th>ID</th>
                     <th>Filename/URL</th>
                     <th>Timestamp</th>
-                    <th>Results</th>
+                    <th>Status</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="submissions-table">
                 {% for submission in submissions %}
-                <tr>
+                <tr class="submission-row" data-status="{{ 'passed' if submission.passed else 'failed' }}">
                     <td>{{ submission.id }}</td>
                     <td>
                         {% if submission.filename %}
@@ -31,24 +49,35 @@
                     </td>
                     <td>{{ submission.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
                     <td>
-                        <ul>
-                            {% for result in submission.results %}
-                            <li>
-                                <strong>{{ result.check }}:</strong>
-                                {% if result.passed %}
-                                    <span class="success">Passed</span>
-                                {% else %}
-                                    <span class="failure">Failed</span>
-                                {% endif %}
-                                - {{ result.message }}
-                            </li>
-                            {% endfor %}
-                        </ul>
+                        {% if submission.passed %}
+                            <span class="status-indicator passed">✓</span>
+                        {% else %}
+                            <span class="status-indicator failed">✗</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <button onclick="viewDetails({{ submission.id }})">View Details</button>
                     </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
+        
+        <div id="pagination">
+            <button onclick="changePage(-1)">Previous</button>
+            <span id="current-page">1</span>
+            <button onclick="changePage(1)">Next</button>
+        </div>
     </div>
+
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Submission Details</h2>
+            <div id="modal-content"></div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 </body>
 </html>
