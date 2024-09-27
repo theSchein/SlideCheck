@@ -115,6 +115,22 @@ def admin_login():
 def admin_dashboard():
     return render_template('admin.html')
 
+@app.route('/admin/update_config', methods=['POST'])
+@admin_required
+def update_admin_config():
+    checks = request.form.getlist('checks')
+    file_types = request.form.getlist('file_types')
+    
+    # Here you would typically save these configurations to a database or file
+    # For now, we'll just log them
+    logger.info(f"Updated checks: {checks}")
+    logger.info(f"Updated file types: {file_types}")
+    
+    # Placeholder for configuration update logic
+    # You might want to update a database or a configuration file here
+    
+    return redirect(url_for('admin_dashboard'))
+
 @app.errorhandler(Exception)
 def handle_exception(e):
     logger.error(f"Unhandled exception: {str(e)}", exc_info=True)

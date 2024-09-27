@@ -9,10 +9,61 @@
 <body>
     <div class="container">
         <h1>Admin Dashboard</h1>
-        <h2>Slide Checks</h2>
-        <!-- Add form for managing slide checks here -->
-        <h2>Accepted File Types</h2>
-        <!-- Add form for managing accepted file types here -->
+        <form method="POST" action="{{ url_for('update_admin_config') }}">
+            <h2>Slide Checks</h2>
+            <div class="check-group">
+                <input type="checkbox" id="check_file_type" name="checks" value="file_type" checked>
+                <label for="check_file_type">File Type</label>
+            </div>
+            <div class="check-group">
+                <input type="checkbox" id="check_num_slides" name="checks" value="num_slides" checked>
+                <label for="check_num_slides">Number of Slides</label>
+            </div>
+            <div class="check-group">
+                <input type="checkbox" id="check_font_usage" name="checks" value="font_usage" checked>
+                <label for="check_font_usage">Font Usage</label>
+            </div>
+            <div class="check-group">
+                <input type="checkbox" id="check_audio_video" name="checks" value="audio_video" checked>
+                <label for="check_audio_video">Audio/Video Presence</label>
+            </div>
+            <div class="check-group">
+                <input type="checkbox" id="check_title_slide" name="checks" value="title_slide" checked>
+                <label for="check_title_slide">Title Slide</label>
+            </div>
+            <div class="check-group">
+                <input type="checkbox" id="check_bullet_point_density" name="checks" value="bullet_point_density" checked>
+                <label for="check_bullet_point_density">Bullet Point Density</label>
+            </div>
+            <div class="check-group">
+                <input type="checkbox" id="check_image_presence" name="checks" value="image_presence" checked>
+                <label for="check_image_presence">Image Presence</label>
+            </div>
+
+            <h2>Accepted File Types</h2>
+            <div class="file-type-group">
+                <input type="checkbox" id="file_type_pdf" name="file_types" value="pdf" checked>
+                <label for="file_type_pdf">PDF</label>
+            </div>
+            <div class="file-type-group">
+                <input type="checkbox" id="file_type_pptx" name="file_types" value="pptx" checked>
+                <label for="file_type_pptx">PowerPoint</label>
+            </div>
+            <div class="file-type-group">
+                <input type="checkbox" id="file_type_odp" name="file_types" value="odp" checked>
+                <label for="file_type_odp">LibreOffice</label>
+            </div>
+            <div class="file-type-group">
+                <input type="checkbox" id="file_type_canva" name="file_types" value="canva" checked>
+                <label for="file_type_canva">Canva</label>
+            </div>
+            <div class="file-type-group">
+                <input type="checkbox" id="file_type_google_slides" name="file_types" value="google_slides" checked>
+                <label for="file_type_google_slides">Google Slides</label>
+            </div>
+
+            <input type="submit" value="Save Configuration">
+        </form>
     </div>
 </body>
 </html>
