@@ -31,7 +31,7 @@ def process_file(input_data):
             return process_url(input_data)
         else:
             file_type = magic.from_file(input_data, mime=True)
-            if file_type == 'application/zip' and input_data.lower().endswith('.odp'):
+            if file_type == 'application/zip' and input_data.lower().endswith('.otp'):
                 file_type = 'application/vnd.oasis.opendocument.presentation'
             
             with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_pdf:
@@ -42,7 +42,7 @@ def process_file(input_data):
             elif file_type == 'application/vnd.openxmlformats-officedocument.presentationml.presentation':
                 convert_to_pdf(input_data, temp_pdf_path)
                 result = process_pdf(temp_pdf_path)
-            elif file_type == 'application/vnd.oasis.opendocument.presentation':
+            elif file_type in ['application/vnd.oasis.opendocument.presentation', 'application/x-openoffice-presentation']:
                 convert_odf_to_pdf(input_data, temp_pdf_path)
                 result = process_pdf(temp_pdf_path)
             elif file_type == 'text/markdown':
@@ -69,5 +69,17 @@ def process_pdf(pdf_path):
         'num_slides': num_pages,
         'content': content
     }
+
+def convert_to_pdf(input_file, output_file):
+    prs = Presentation(input_file)
+    pdf = canvas.Canvas(output_file, pagesize=letter)
+    for slide in prs.slides:
+        pdf.setFont("Helvetica", 12)
+        pdf.drawString(100, 700, f"Slide {prs.slides.index(slide) + 1}")
+        for shape in slide.shapes:
+            if hasattr(shape, 'text'):
+                pdf.drawString(100, 680 - 20 * slide.shapes.index(shape), shape.text)
+        pdf.showPage()
+    pdf.save()
 
 # Rest of the file remains unchanged
