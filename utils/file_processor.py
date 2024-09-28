@@ -302,10 +302,13 @@ def process_google_slides(url):
         presentation_id = parsed_url.path.split('/')[-2]
 
         creds = None
-        if os.path.exists('google_credentials.json'):
+        if os.path.exists('google_service_account.json'):
             creds = service_account.Credentials.from_service_account_file(
-                'google_credentials.json', scopes=['https://www.googleapis.com/auth/presentations.readonly']
+                'google_service_account.json',
+                scopes=['https://www.googleapis.com/auth/presentations.readonly']
             )
+        else:
+            raise FileNotFoundError("Google service account JSON file not found.")
 
         service = build('slides', 'v1', credentials=creds)
 

@@ -11,31 +11,18 @@ This application validates slide decks using AI and deterministic checks. It sup
 
 2. Set up environment variables:
    - `OPENAI_API_KEY`: Your OpenAI API key
-   - `GOOGLE_CREDENTIALS_PATH`: Path to your Google Slides API credentials file
 
-3. Run the application:
+3. Set up Google Slides API:
+   - Go to the [Google Cloud Console](https://console.cloud.google.com/)
+   - Create a new project or select an existing one
+   - Enable the Google Slides API for your project
+   - Create a service account and download the JSON key file
+   - Rename the downloaded file to `google_service_account.json` and place it in the root directory of the project
+
+4. Run the application:
    ```
    python app.py
    ```
-
-## Google Slides API Setup
-
-To use the Google Slides API integration, follow these steps:
-
-1. Go to the [Google Cloud Console](https://console.cloud.google.com/).
-2. Create a new project or select an existing one.
-3. Enable the Google Slides API for your project.
-4. Create credentials (OAuth 2.0 Client ID) for a Desktop application.
-5. Download the credentials JSON file.
-6. Rename the downloaded file to `google_credentials.json` and place it in a secure location.
-7. Set the `GOOGLE_CREDENTIALS_PATH` environment variable to the full path of the `google_credentials.json` file.
-
-Example:
-```
-export GOOGLE_CREDENTIALS_PATH="/path/to/google_credentials.json"
-```
-
-Make sure to keep your credentials file secure and never commit it to version control.
 
 ## Usage
 
@@ -46,7 +33,7 @@ Make sure to keep your credentials file secure and never commit it to version co
 
 ## Security Notes
 
-- Always use environment variables for sensitive information like API keys and credential file paths.
-- Ensure that the `google_credentials.json` file is stored securely and not exposed to unauthorized users.
+- Always use environment variables for sensitive information like API keys.
+- Ensure that the `google_service_account.json` file is stored securely and not exposed to unauthorized users.
 - Regularly rotate your API keys and update the corresponding environment variables.
 

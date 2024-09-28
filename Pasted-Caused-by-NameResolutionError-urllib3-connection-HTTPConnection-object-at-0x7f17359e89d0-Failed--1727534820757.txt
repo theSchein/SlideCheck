@@ -1,0 +1,86 @@
+Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at 0x7f17359e89d0>: Failed to resolve 'metadata.google.internal' ([Errno -2] Name or service not known)"))
+ERROR:utils.file_processor:Error processing Google Slides: Failed to retrieve http://metadata.google.internal/computeMetadata/v1/universe/universe_domain from the Google Compute Engine metadata service. Compute Engine Metadata server unavailable
+Traceback (most recent call last):
+  File "/home/runner/SlideCheckAI/utils/file_processor.py", line 312, in process_google_slides
+    presentation = service.presentations().get(presentationId=presentation_id).execute()
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/SlideCheckAI/.pythonlibs/lib/python3.11/site-packages/googleapiclient/discovery.py", line 1095, in method
+    self._validate_credentials()
+  File "/home/runner/SlideCheckAI/.pythonlibs/lib/python3.11/site-packages/googleapiclient/discovery.py", line 1622, in _validate_credentials
+    or universe.compare_domains(self._universe_domain, credentials)
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/SlideCheckAI/.pythonlibs/lib/python3.11/site-packages/google/api_core/universe.py", line 78, in compare_domains
+    credentials_universe = getattr(credentials, "universe_domain", DEFAULT_UNIVERSE)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/SlideCheckAI/.pythonlibs/lib/python3.11/site-packages/google/auth/compute_engine/credentials.py", line 154, in universe_domain
+    self._universe_domain = _metadata.get_universe_domain(
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/SlideCheckAI/.pythonlibs/lib/python3.11/site-packages/google/auth/compute_engine/_metadata.py", line 296, in get_universe_domain
+    universe_domain = get(
+                      ^^^^
+  File "/home/runner/SlideCheckAI/.pythonlibs/lib/python3.11/site-packages/google/auth/compute_engine/_metadata.py", line 229, in get
+    raise exceptions.TransportError(
+google.auth.exceptions.TransportError: Failed to retrieve http://metadata.google.internal/computeMetadata/v1/universe/universe_domain from the Google Compute Engine metadata service. Compute Engine Metadata server unavailable
+INFO:werkzeug:172.31.196.65 - - [28/Sep/2024 14:45:17] "POST / HTTP/1.1" 400 -
+DEBUG:app:Form submitted successfully
+DEBUG:app:Processing URL: https://docs.google.com/presentation/d/1bNSeYqL31DPKunOfMOPUtHQw3q4kHua_DnEYNEXqd4Y/edit?usp=sharing
+DEBUG:utils.file_processor:Starting to process input: https://docs.google.com/presentation/d/1bNSeYqL31DPKunOfMOPUtHQw3q4kHua_DnEYNEXqd4Y/edit?usp=sharing
+INFO:googleapiclient.discovery_cache:file_cache is only supported with oauth2client<4.0.0
+DEBUG:google.auth._default:Checking None for explicit credentials as part of auth process...
+DEBUG:google.auth._default:Checking Cloud SDK credentials as part of auth process...
+DEBUG:google.auth._default:Cloud SDK credentials not found on disk; not using them
+DEBUG:google.auth.transport._http_client:Making request: GET http://169.254.169.254
+WARNING:google.auth.compute_engine._metadata:Compute Engine Metadata server unavailable on attempt 1 of 3. Reason: Remote end closed connection without response
+DEBUG:google.auth.transport._http_client:Making request: GET http://169.254.169.254
+WARNING:google.auth.compute_engine._metadata:Compute Engine Metadata server unavailable on attempt 2 of 3. Reason: Remote end closed connection without response
+DEBUG:google.auth.transport._http_client:Making request: GET http://169.254.169.254
+WARNING:google.auth.compute_engine._metadata:Compute Engine Metadata server unavailable on attempt 3 of 3. Reason: Remote end closed connection without response
+DEBUG:google.auth.transport._http_client:Making request: GET http://metadata.google.internal/computeMetadata/v1/project/project-id
+WARNING:google.auth.compute_engine._metadata:Compute Engine Metadata server unavailable on attempt 1 of 5. Reason: [Errno -2] Name or service not known
+DEBUG:google.auth.transport._http_client:Making request: GET http://metadata.google.internal/computeMetadata/v1/project/project-id
+WARNING:google.auth.compute_engine._metadata:Compute Engine Metadata server unavailable on attempt 2 of 5. Reason: [Errno -2] Name or service not known
+DEBUG:google.auth.transport._http_client:Making request: GET http://metadata.google.internal/computeMetadata/v1/project/project-id
+WARNING:google.auth.compute_engine._metadata:Compute Engine Metadata server unavailable on attempt 3 of 5. Reason: [Errno -2] Name or service not known
+DEBUG:google.auth.transport._http_client:Making request: GET http://metadata.google.internal/computeMetadata/v1/project/project-id
+WARNING:google.auth.compute_engine._metadata:Compute Engine Metadata server unavailable on attempt 4 of 5. Reason: [Errno -2] Name or service not known
+DEBUG:google.auth.transport._http_client:Making request: GET http://metadata.google.internal/computeMetadata/v1/project/project-id
+WARNING:google.auth.compute_engine._metadata:Compute Engine Metadata server unavailable on attempt 5 of 5. Reason: [Errno -2] Name or service not known
+WARNING:google.auth._default:No project ID could be determined. Consider running `gcloud config set project` or setting the GOOGLE_CLOUD_PROJECT environment variable
+DEBUG:google.auth.transport.requests:Making request: GET http://metadata.google.internal/computeMetadata/v1/universe/universe_domain
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): metadata.google.internal:80
+WARNING:google.auth.compute_engine._metadata:Compute Engine Metadata server unavailable on attempt 1 of 5. Reason: HTTPConnectionPool(host='metadata.google.internal', port=80): Max retries exceeded with url: /computeMetadata/v1/universe/universe_domain (Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at 0x7f17359d5790>: Failed to resolve 'metadata.google.internal' ([Errno -2] Name or service not known)"))
+DEBUG:google.auth.transport.requests:Making request: GET http://metadata.google.internal/computeMetadata/v1/universe/universe_domain
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (2): metadata.google.internal:80
+WARNING:google.auth.compute_engine._metadata:Compute Engine Metadata server unavailable on attempt 2 of 5. Reason: HTTPConnectionPool(host='metadata.google.internal', port=80): Max retries exceeded with url: /computeMetadata/v1/universe/universe_domain (Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at 0x7f1735a38890>: Failed to resolve 'metadata.google.internal' ([Errno -2] Name or service not known)"))
+DEBUG:google.auth.transport.requests:Making request: GET http://metadata.google.internal/computeMetadata/v1/universe/universe_domain
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (3): metadata.google.internal:80
+WARNING:google.auth.compute_engine._metadata:Compute Engine Metadata server unavailable on attempt 3 of 5. Reason: HTTPConnectionPool(host='metadata.google.internal', port=80): Max retries exceeded with url: /computeMetadata/v1/universe/universe_domain (Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at 0x7f1736aedb90>: Failed to resolve 'metadata.google.internal' ([Errno -2] Name or service not known)"))
+DEBUG:google.auth.transport.requests:Making request: GET http://metadata.google.internal/computeMetadata/v1/universe/universe_domain
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (4): metadata.google.internal:80
+WARNING:google.auth.compute_engine._metadata:Compute Engine Metadata server unavailable on attempt 4 of 5. Reason: HTTPConnectionPool(host='metadata.google.internal', port=80): Max retries exceeded with url: /computeMetadata/v1/universe/universe_domain (Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at 0x7f1735986f90>: Failed to resolve 'metadata.google.internal' ([Errno -2] Name or service not known)"))
+DEBUG:google.auth.transport.requests:Making request: GET http://metadata.google.internal/computeMetadata/v1/universe/universe_domain
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (5): metadata.google.internal:80
+WARNING:google.auth.compute_engine._metadata:Compute Engine Metadata server unavailable on attempt 5 of 5. Reason: HTTPConnectionPool(host='metadata.google.internal', port=80): Max retries exceeded with url: /computeMetadata/v1/universe/universe_domain (Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at 0x7f1735985950>: Failed to resolve 'metadata.google.internal' ([Errno -2] Name or service not known)"))
+ERROR:utils.file_processor:Error processing Google Slides: Failed to retrieve http://metadata.google.internal/computeMetadata/v1/universe/universe_domain from the Google Compute Engine metadata service. Compute Engine Metadata server unavailable
+Traceback (most recent call last):
+  File "/home/runner/SlideCheckAI/utils/file_processor.py", line 312, in process_google_slides
+    presentation = service.presentations().get(presentationId=presentation_id).execute()
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/SlideCheckAI/.pythonlibs/lib/python3.11/site-packages/googleapiclient/discovery.py", line 1095, in method
+    self._validate_credentials()
+  File "/home/runner/SlideCheckAI/.pythonlibs/lib/python3.11/site-packages/googleapiclient/discovery.py", line 1622, in _validate_credentials
+    or universe.compare_domains(self._universe_domain, credentials)
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/SlideCheckAI/.pythonlibs/lib/python3.11/site-packages/google/api_core/universe.py", line 78, in compare_domains
+    credentials_universe = getattr(credentials, "universe_domain", DEFAULT_UNIVERSE)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/SlideCheckAI/.pythonlibs/lib/python3.11/site-packages/google/auth/compute_engine/credentials.py", line 154, in universe_domain
+    self._universe_domain = _metadata.get_universe_domain(
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/SlideCheckAI/.pythonlibs/lib/python3.11/site-packages/google/auth/compute_engine/_metadata.py", line 296, in get_universe_domain
+    universe_domain = get(
+                      ^^^^
+  File "/home/runner/SlideCheckAI/.pythonlibs/lib/python3.11/site-packages/google/auth/compute_engine/_metadata.py", line 229, in get
+    raise exceptions.TransportError(
+google.auth.exceptions.TransportError: Failed to retrieve http://metadata.google.internal/computeMetadata/v1/universe/universe_domain from the Google Compute Engine metadata service. Compute Engine Metadata server unavailable
+INFO:werkzeug:172.31.196.65 - - [28/Sep/2024 14:46:35] "POST / HTTP/1.1" 400 -
