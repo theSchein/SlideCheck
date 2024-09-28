@@ -151,94 +151,135 @@ def process_url(url):
 
 def process_canva_link(url):
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch()
-            page = browser.new_page()
-            page.goto(url)
+        try:
+            with sync_playwright() as p:
+                browser = p.chromium.launch()
+                page = browser.new_page()
+                page.goto(url)
+                
+                page.wait_for_selector('.view-wrapper', timeout=30000)
+                
+                slides = page.query_selector_all('.view-wrapper')
+                content = []
+                
+                for slide in slides:
+                    slide_text = slide.inner_text()
+                    content.append(slide_text)
+                
+                browser.close()
             
-            page.wait_for_selector('.view-wrapper', timeout=30000)
+            with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_pdf:
+                temp_pdf_path = temp_pdf.name
             
-            slides = page.query_selector_all('.view-wrapper')
-            content = []
+            pdf = canvas.Canvas(temp_pdf_path, pagesize=letter)
+            pdf.setFont("Helvetica", 12)
             
-            for slide in slides:
-                slide_text = slide.inner_text()
-                content.append(slide_text)
+            for i, slide_content in enumerate(content):
+                pdf.drawString(100, 750, f"Slide {i + 1}")
+                y = 720
+                for line in slide_content.split('\n'):
+                    pdf.drawString(100, y, line)
+                    y -= 20
+                    if y < 50:
+                        pdf.showPage()
+                        y = 750
+                pdf.showPage()
             
-            browser.close()
-        
-        with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_pdf:
-            temp_pdf_path = temp_pdf.name
-        
-        pdf = canvas.Canvas(temp_pdf_path, pagesize=letter)
-        pdf.setFont("Helvetica", 12)
-        
-        for i, slide_content in enumerate(content):
-            pdf.drawString(100, 750, f"Slide {i + 1}")
-            y = 720
-            for line in slide_content.split('\n'):
-                pdf.drawString(100, y, line)
-                y -= 20
-                if y < 50:
-                    pdf.showPage()
-                    y = 750
-            pdf.showPage()
-        
-        pdf.save()
-        
-        result = process_pdf(temp_pdf_path)
-        result['type'] = 'canva'
-        result['url'] = url
-        result['temp_file_path'] = temp_pdf_path
-        return result
+            pdf.save()
+            
+            result = process_pdf(temp_pdf_path)
+            result['type'] = 'canva'
+            result['url'] = url
+            result['temp_file_path'] = temp_pdf_path
+            return result
+        except Exception as e:
+            logger.error(f"Error initializing Playwright: {str(e)}")
+            # Fallback to a simple request-based method
+            return process_url_fallback(url, 'canva')
     except Exception as e:
         logger.error(f"Error processing Canva link: {str(e)}", exc_info=True)
         return {'error': str(e)}
 
 def process_figma_link(url):
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch()
-            page = browser.new_page()
-            page.goto(url)
+        try:
+            with sync_playwright() as p:
+                browser = p.chromium.launch()
+                page = browser.new_page()
+                page.goto(url)
+                
+                page.wait_for_selector('.view-wrapper', timeout=30000)
+                
+                slides = page.query_selector_all('.view-wrapper')
+                content = []
+                
+                for slide in slides:
+                    slide_text = slide.inner_text()
+                    content.append(slide_text)
+                
+                browser.close()
             
-            page.wait_for_selector('.view-wrapper', timeout=30000)
+            with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_pdf:
+                temp_pdf_path = temp_pdf.name
             
-            slides = page.query_selector_all('.view-wrapper')
-            content = []
+            pdf = canvas.Canvas(temp_pdf_path, pagesize=letter)
+            pdf.setFont("Helvetica", 12)
             
-            for slide in slides:
-                slide_text = slide.inner_text()
-                content.append(slide_text)
+            for i, slide_content in enumerate(content):
+                pdf.drawString(100, 750, f"Slide {i + 1}")
+                y = 720
+                for line in slide_content.split('\n'):
+                    pdf.drawString(100, y, line)
+                    y -= 20
+                    if y < 50:
+                        pdf.showPage()
+                        y = 750
+                pdf.showPage()
             
-            browser.close()
-        
+            pdf.save()
+            
+            result = process_pdf(temp_pdf_path)
+            result['type'] = 'figma'
+            result['url'] = url
+            result['temp_file_path'] = temp_pdf_path
+            return result
+        except Exception as e:
+            logger.error(f"Error initializing Playwright: {str(e)}")
+            # Fallback to a simple request-based method
+            return process_url_fallback(url, 'figma')
+    except Exception as e:
+        logger.error(f"Error processing Figma link: {str(e)}", exc_info=True)
+        return {'error': str(e)}
+
+def process_url_fallback(url, link_type):
+    try:
+        response = requests.get(url)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        content = soup.get_text()
+
         with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_pdf:
             temp_pdf_path = temp_pdf.name
-        
+
         pdf = canvas.Canvas(temp_pdf_path, pagesize=letter)
         pdf.setFont("Helvetica", 12)
         
-        for i, slide_content in enumerate(content):
-            pdf.drawString(100, 750, f"Slide {i + 1}")
-            y = 720
-            for line in slide_content.split('\n'):
-                pdf.drawString(100, y, line)
-                y -= 20
-                if y < 50:
-                    pdf.showPage()
-                    y = 750
-            pdf.showPage()
-        
+        lines = content.split('\n')
+        y = 750
+        for line in lines:
+            pdf.drawString(50, y, line[:80])  # Limit line length
+            y -= 14
+            if y < 50:
+                pdf.showPage()
+                y = 750
         pdf.save()
-        
+
         result = process_pdf(temp_pdf_path)
-        result['type'] = 'figma'
+        result['type'] = link_type
         result['url'] = url
         result['temp_file_path'] = temp_pdf_path
         return result
     except Exception as e:
-        logger.error(f"Error processing Figma link: {str(e)}", exc_info=True)
+        logger.error(f"Error in fallback processing for {link_type} link: {str(e)}")
         return {'error': str(e)}
 
 def convert_rtf_to_pdf(input_file, output_file):

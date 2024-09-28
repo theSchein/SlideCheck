@@ -11,7 +11,7 @@ def test_canva_processing():
     try:
         result = process_url(canva_url)
         
-        print("Canva Processing Result:")
+        print("Canva Processing Result:")+++++++++++++++++++++++++++++++++++++++++++
         print(f"Type: {result['type']}")
         print(f"Number of slides: {result['num_slides']}")
         print(f"Content preview: {result['content'][:2]}")  # Show first two slides
