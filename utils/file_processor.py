@@ -19,7 +19,6 @@ from weasyprint.text.fonts import FontConfiguration
 import subprocess
 import platform
 import requests
-from playwright.sync_api import sync_playwright
 from docx import Document
 from striprtf.striprtf import rtf_to_text
 from keynote_parser import keynote_parser
@@ -156,73 +155,36 @@ def process_generic_url(url):
 
 def process_canva_link(url):
     try:
-        return process_with_playwright(url, 'canva')
+        response = requests.get(url)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        content = soup.get_text()
+
+        with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_pdf:
+            temp_pdf_path = temp_pdf.name
+
+        pdf = canvas.Canvas(temp_pdf_path, pagesize=letter)
+        pdf.setFont("Helvetica", 12)
+        
+        lines = content.split('\n')
+        y = 750
+        for line in lines:
+            pdf.drawString(50, y, line[:80])
+            y -= 14
+            if y < 50:
+                pdf.showPage()
+                y = 750
+        pdf.save()
+
+        result = process_pdf(temp_pdf_path)
+        result['type'] = 'canva'
+        result['url'] = url
+        result['temp_file_path'] = temp_pdf_path
+        return result
     except Exception as e:
         logger.error(f"Error processing Canva link: {str(e)}", exc_info=True)
-        return process_url_fallback(url, 'canva')
+        return {'error': str(e)}
 
 def process_figma_link(url):
-    try:
-        return process_with_playwright(url, 'figma')
-    except Exception as e:
-        logger.error(f"Error processing Figma link: {str(e)}", exc_info=True)
-        return process_url_fallback(url, 'figma')
-
-def process_with_playwright(url, link_type):
-    max_retries = 3
-    for attempt in range(max_retries):
-        try:
-            logger.debug(f"Attempting to initialize Playwright (attempt {attempt + 1})")
-            with sync_playwright() as p:
-                logger.debug("Playwright initialized successfully")
-                browser = p.chromium.launch(headless=True)
-                page = browser.new_page()
-                logger.debug(f"Navigating to URL: {url}")
-                page.goto(url, wait_until="networkidle", timeout=60000)
-                
-                logger.debug("Waiting for .view-wrapper selector")
-                page.wait_for_selector('.view-wrapper', timeout=30000)
-                
-                slides = page.query_selector_all('.view-wrapper')
-                content = []
-                
-                for slide in slides:
-                    slide_text = slide.inner_text()
-                    content.append(slide_text)
-                
-                browser.close()
-            
-            with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_pdf:
-                temp_pdf_path = temp_pdf.name
-            
-            pdf = canvas.Canvas(temp_pdf_path, pagesize=letter)
-            pdf.setFont("Helvetica", 12)
-            
-            for i, slide_content in enumerate(content):
-                pdf.drawString(100, 750, f"Slide {i + 1}")
-                y = 720
-                for line in slide_content.split('\n'):
-                    pdf.drawString(100, y, line)
-                    y -= 20
-                    if y < 50:
-                        pdf.showPage()
-                        y = 750
-                pdf.showPage()
-            
-            pdf.save()
-            
-            result = process_pdf(temp_pdf_path)
-            result['type'] = link_type
-            result['url'] = url
-            result['temp_file_path'] = temp_pdf_path
-            return result
-        except Exception as e:
-            logger.error(f"Error in Playwright (attempt {attempt + 1}): {str(e)}", exc_info=True)
-            if attempt == max_retries - 1:
-                logger.error("Max retries reached. Falling back to URL processing.")
-                return process_url_fallback(url, link_type)
-
-def process_url_fallback(url, link_type):
     try:
         response = requests.get(url)
         soup = BeautifulSoup(response.text, 'html.parser')
@@ -245,12 +207,12 @@ def process_url_fallback(url, link_type):
         pdf.save()
 
         result = process_pdf(temp_pdf_path)
-        result['type'] = link_type
+        result['type'] = 'figma'
         result['url'] = url
         result['temp_file_path'] = temp_pdf_path
         return result
     except Exception as e:
-        logger.error(f"Error in fallback processing for {link_type} link: {str(e)}")
+        logger.error(f"Error processing Figma link: {str(e)}", exc_info=True)
         return {'error': str(e)}
 
 def convert_rtf_to_pdf(input_file, output_file):
