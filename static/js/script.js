@@ -14,9 +14,14 @@ document.addEventListener('DOMContentLoaded', function() {
         resultsDiv.innerHTML = '';
         resultsDiv.appendChild(loadingBar);
 
+        const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+
         fetch('/', {
             method: 'POST',
-            body: formData
+            body: formData,
+            headers: {
+                'X-CSRFToken': csrfToken
+            }
         })
         .then(response => response.json())
         .then(data => {

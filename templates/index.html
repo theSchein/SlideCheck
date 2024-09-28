@@ -19,6 +19,7 @@
         </ul>
         <form method="POST" enctype="multipart/form-data">
             {{ form.hidden_tag() }}
+            {{ form.csrf_token }}
             <div>
                 {{ form.file.label }}
                 {{ form.file() }}

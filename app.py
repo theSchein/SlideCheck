@@ -15,6 +15,7 @@ from datetime import datetime
 from PyPDF2 import PdfMerger
 import io
 import json
+from flask_wtf.csrf import CSRFProtect
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.urandom(24)
@@ -23,12 +24,12 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///submissions.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+csrf = CSRFProtect(app)
 db = SQLAlchemy(app)
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-# Initialize OpenAI client
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 class Conference(db.Model):
@@ -136,7 +137,6 @@ def index():
 
 @app.route('/admin/login')
 def admin_login():
-    # Placeholder for now, we'll implement proper login later
     session['admin'] = True
     logger.info("Admin logged in successfully")
     return redirect(url_for('admin_dashboard'))
@@ -269,22 +269,17 @@ def init_db():
     with app.app_context():
         db.create_all()
         
-        # Check if conference_id column exists in submission table
         inspector = db.inspect(db.engine)
         if 'conference_id' not in [c['name'] for c in inspector.get_columns('submission')]:
-            # Add conference_id column
             with db.engine.connect() as conn:
                 conn.execute(db.text('ALTER TABLE submission ADD COLUMN conference_id INTEGER'))
                 conn.commit()
         
-        # Check if custom_checks column exists in conference table
         if 'custom_checks' not in [c['name'] for c in inspector.get_columns('conference')]:
-            # Add custom_checks column
             with db.engine.connect() as conn:
                 conn.execute(db.text('ALTER TABLE conference ADD COLUMN custom_checks JSON'))
                 conn.commit()
         
-        # Add sample conferences if they don't exist
         if Conference.query.count() == 0:
             sample_conferences = [
                 Conference(
@@ -309,7 +304,6 @@ def init_db():
             db.session.add_all(sample_conferences)
             db.session.commit()
 
-# Call init_db() function
 init_db()
 
 if __name__ == '__main__':
