@@ -50,8 +50,8 @@ class Submission(db.Model):
     conference = db.relationship('Conference', backref=db.backref('submissions', lazy=True))
 
 class SlideForm(FlaskForm):
-    file = FileField('Upload Slide Deck (PDF, PPTX, ODP)', validators=[Optional()])
-    url = StringField('Or enter Canva or Google Slides URL', validators=[Optional(), URL()])
+    file = FileField('Upload Slide Deck (PDF, PPTX, ODP, KEY)', validators=[Optional()])
+    url = StringField('Or enter Canva or Figma URL', validators=[Optional(), URL()])
     conference = SelectField('Select Conference', coerce=int, validators=[DataRequired()])
     submit = SubmitField('Validate')
 
