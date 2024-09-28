@@ -22,7 +22,7 @@ import requests
 from playwright.sync_api import sync_playwright
 from docx import Document
 from striprtf.striprtf import rtf_to_text
-from keynote_parser.api import Keynote
+from keynote_parser import Keynote
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
