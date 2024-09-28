@@ -1,4 +1,4 @@
-import magic
+import os
 import fitz
 import logging
 from pptx import Presentation
@@ -7,23 +7,23 @@ from odf.opendocument import load
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse, parse_qs
-import os
 import tempfile
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
-from pdf2image import convert_from_path
 import io
 import markdown
 from weasyprint import HTML, CSS
 from weasyprint.text.fonts import FontConfiguration
 import subprocess
 import platform
-import requests
 from docx import Document
 from striprtf.striprtf import rtf_to_text
 from keynote_parser import keynote_parser
 import zipfile
 import xml.etree.ElementTree as ET
+from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
+from google.oauth2 import service_account
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -126,6 +126,8 @@ def process_url(url):
             return process_canva_link(url)
         elif 'figma.com' in parsed_url.netloc:
             return process_figma_link(url)
+        elif 'docs.google.com' in parsed_url.netloc and 'presentation' in parsed_url.path:
+            return process_google_slides(url)
         
         return process_generic_url(url)
     except Exception as e:
@@ -293,3 +295,57 @@ def extract_text_from_keynote(keynote_file):
                         slide_content += text_elem.text + "\n" if text_elem.text else ""
                     slides.append(slide_content)
     return slides
+
+def process_google_slides(url):
+    try:
+        parsed_url = urlparse(url)
+        presentation_id = parsed_url.path.split('/')[-2]
+
+        creds = None
+        if os.path.exists('google_credentials.json'):
+            creds = service_account.Credentials.from_service_account_file(
+                'google_credentials.json', scopes=['https://www.googleapis.com/auth/presentations.readonly']
+            )
+
+        service = build('slides', 'v1', credentials=creds)
+
+        presentation = service.presentations().get(presentationId=presentation_id).execute()
+        slides = presentation.get('slides', [])
+
+        content = []
+        for slide in slides:
+            slide_content = ""
+            for element in slide.get('pageElements', []):
+                if 'shape' in element and 'text' in element['shape']:
+                    for textElement in element['shape']['text'].get('textElements', []):
+                        if 'textRun' in textElement:
+                            slide_content += textElement['textRun'].get('content', '')
+            content.append(slide_content.strip())
+
+        with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_pdf:
+            temp_pdf_path = temp_pdf.name
+
+        pdf = canvas.Canvas(temp_pdf_path, pagesize=letter)
+        pdf.setFont("Helvetica", 12)
+        
+        for i, slide_content in enumerate(content):
+            pdf.drawString(100, 750, f"Slide {i + 1}")
+            y = 720
+            for line in slide_content.split('\n'):
+                pdf.drawString(100, y, line)
+                y -= 20
+                if y < 50:
+                    pdf.showPage()
+                    y = 750
+            pdf.showPage()
+        pdf.save()
+
+        result = process_pdf(temp_pdf_path)
+        result['type'] = 'google_slides'
+        result['url'] = url
+        result['temp_file_path'] = temp_pdf_path
+        return result
+
+    except Exception as e:
+        logger.error(f"Error processing Google Slides: {str(e)}", exc_info=True)
+        return {'error': str(e)}

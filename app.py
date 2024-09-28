@@ -16,6 +16,7 @@ from PyPDF2 import PdfMerger
 import io
 import json
 from flask_wtf.csrf import CSRFProtect
+from urllib.parse import urlparse
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.urandom(24)
@@ -51,7 +52,7 @@ class Submission(db.Model):
 
 class SlideForm(FlaskForm):
     file = FileField('Upload Slide Deck (PDF, PPTX, ODP, KEY)', validators=[Optional()])
-    url = StringField('Or enter Canva or Figma URL', validators=[Optional(), URL()])
+    url = StringField('Or enter Canva, Figma, or Google Slides URL', validators=[Optional(), URL()])
     conference = SelectField('Select Conference', coerce=int, validators=[DataRequired()])
     submit = SubmitField('Validate')
 
@@ -62,6 +63,12 @@ class SlideForm(FlaskForm):
             self.file.errors.append('Please either upload a file or provide a URL.')
             self.url.errors.append('Please either upload a file or provide a URL.')
             return False
+        if self.url.data:
+            parsed_url = urlparse(self.url.data)
+            valid_domains = ['canva.com', 'figma.com', 'docs.google.com']
+            if not any(domain in parsed_url.netloc for domain in valid_domains):
+                self.url.errors.append('Please provide a valid Canva, Figma, or Google Slides URL.')
+                return False
         return True
 
 def admin_required(f):

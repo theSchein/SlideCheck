@@ -1,6 +1,6 @@
 # AI Slide Deck Validator
 
-This application validates slide decks using AI and deterministic checks. It supports PDF, PowerPoint (.pptx), LibreOffice Presentation (.odp), Canva, and Google Slides formats.
+This application validates slide decks using AI and deterministic checks. It supports PDF, PowerPoint (.pptx), LibreOffice Presentation (.odp), Canva, Figma, Google Slides, and Keynote formats.
 
 ## Setup
 
@@ -40,7 +40,7 @@ Make sure to keep your credentials file secure and never commit it to version co
 ## Usage
 
 1. Open the application in your web browser.
-2. Upload a slide deck file (PDF, PPTX, or ODP) or provide a Canva or Google Slides URL.
+2. Upload a slide deck file (PDF, PPTX, ODP, or KEY) or provide a Canva, Figma, or Google Slides URL.
 3. Click "Validate" to process the slide deck.
 4. View the validation results, including both deterministic and AI-powered checks.
 
