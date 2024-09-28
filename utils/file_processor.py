@@ -128,15 +128,16 @@ def process_url(url):
         elif 'figma.com' in parsed_url.netloc:
             return process_figma_link(url)
         
-        with sync_playwright() as p:
-            browser = p.chromium.launch()
-            page = browser.new_page()
-            page.goto(url)
-            content = page.content()
-            browser.close()
+        return process_generic_url(url)
+    except Exception as e:
+        logger.error(f"Error processing URL: {str(e)}", exc_info=True)
+        return {'error': str(e)}
 
-        soup = BeautifulSoup(content, 'html.parser')
-        text_content = soup.get_text()
+def process_generic_url(url):
+    try:
+        response = requests.get(url)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        content = soup.get_text()
 
         with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_pdf:
             temp_pdf_path = temp_pdf.name
@@ -150,67 +151,36 @@ def process_url(url):
         result['temp_file_path'] = temp_pdf_path
         return result
     except Exception as e:
-        logger.error(f"Error processing URL: {str(e)}", exc_info=True)
+        logger.error(f"Error in generic URL processing: {str(e)}")
         return {'error': str(e)}
 
 def process_canva_link(url):
     try:
-        try:
-            with sync_playwright() as p:
-                browser = p.chromium.launch()
-                page = browser.new_page()
-                page.goto(url, wait_until="networkidle")
-                
-                page.wait_for_selector('.view-wrapper', timeout=30000)
-                
-                slides = page.query_selector_all('.view-wrapper')
-                content = []
-                
-                for slide in slides:
-                    slide_text = slide.inner_text()
-                    content.append(slide_text)
-                
-                browser.close()
-            
-            with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_pdf:
-                temp_pdf_path = temp_pdf.name
-            
-            pdf = canvas.Canvas(temp_pdf_path, pagesize=letter)
-            pdf.setFont("Helvetica", 12)
-            
-            for i, slide_content in enumerate(content):
-                pdf.drawString(100, 750, f"Slide {i + 1}")
-                y = 720
-                for line in slide_content.split('\n'):
-                    pdf.drawString(100, y, line)
-                    y -= 20
-                    if y < 50:
-                        pdf.showPage()
-                        y = 750
-                pdf.showPage()
-            
-            pdf.save()
-            
-            result = process_pdf(temp_pdf_path)
-            result['type'] = 'canva'
-            result['url'] = url
-            result['temp_file_path'] = temp_pdf_path
-            return result
-        except Exception as e:
-            logger.error(f"Error initializing Playwright: {str(e)}")
-            return process_url_fallback(url, 'canva')
+        return process_with_playwright(url, 'canva')
     except Exception as e:
         logger.error(f"Error processing Canva link: {str(e)}", exc_info=True)
         return process_url_fallback(url, 'canva')
 
 def process_figma_link(url):
     try:
+        return process_with_playwright(url, 'figma')
+    except Exception as e:
+        logger.error(f"Error processing Figma link: {str(e)}", exc_info=True)
+        return process_url_fallback(url, 'figma')
+
+def process_with_playwright(url, link_type):
+    max_retries = 3
+    for attempt in range(max_retries):
         try:
+            logger.debug(f"Attempting to initialize Playwright (attempt {attempt + 1})")
             with sync_playwright() as p:
-                browser = p.chromium.launch()
+                logger.debug("Playwright initialized successfully")
+                browser = p.chromium.launch(headless=True)
                 page = browser.new_page()
-                page.goto(url, wait_until="networkidle")
+                logger.debug(f"Navigating to URL: {url}")
+                page.goto(url, wait_until="networkidle", timeout=60000)
                 
+                logger.debug("Waiting for .view-wrapper selector")
                 page.wait_for_selector('.view-wrapper', timeout=30000)
                 
                 slides = page.query_selector_all('.view-wrapper')
@@ -242,16 +212,15 @@ def process_figma_link(url):
             pdf.save()
             
             result = process_pdf(temp_pdf_path)
-            result['type'] = 'figma'
+            result['type'] = link_type
             result['url'] = url
             result['temp_file_path'] = temp_pdf_path
             return result
         except Exception as e:
-            logger.error(f"Error initializing Playwright: {str(e)}")
-            return process_url_fallback(url, 'figma')
-    except Exception as e:
-        logger.error(f"Error processing Figma link: {str(e)}", exc_info=True)
-        return process_url_fallback(url, 'figma')
+            logger.error(f"Error in Playwright (attempt {attempt + 1}): {str(e)}", exc_info=True)
+            if attempt == max_retries - 1:
+                logger.error("Max retries reached. Falling back to URL processing.")
+                return process_url_fallback(url, link_type)
 
 def process_url_fallback(url, link_type):
     try:
