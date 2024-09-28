@@ -23,6 +23,8 @@ from playwright.sync_api import sync_playwright
 from docx import Document
 from striprtf.striprtf import rtf_to_text
 from keynote_parser import keynote_parser
+import zipfile
+import xml.etree.ElementTree as ET
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -38,7 +40,7 @@ def process_file(input_data):
                 file_type = 'application/vnd.oasis.opendocument.presentation'
             elif file_type == 'application/zip' and input_data.lower().endswith('.key'):
                 file_type = 'application/x-iwork-keynote-sffkey'
-            
+
             with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_pdf:
                 temp_pdf_path = temp_pdf.name
 
@@ -78,11 +80,7 @@ def process_pdf(pdf_path):
     for page in doc:
         content.append(page.get_text())
     doc.close()
-    return {
-        'type': 'pdf',
-        'num_slides': num_pages,
-        'content': content
-    }
+    return {'type': 'pdf', 'num_slides': num_pages, 'content': content}
 
 def convert_to_pdf(input_file, output_file):
     prs = Presentation(input_file)
@@ -120,6 +118,10 @@ def convert_markdown_to_pdf(input_file, output_file):
 
 def process_url(url):
     try:
+        parsed_url = urlparse(url)
+        if 'canva.com' in parsed_url.netloc:
+            return process_canva_link(url)
+        
         with sync_playwright() as p:
             browser = p.chromium.launch()
             page = browser.new_page()
@@ -145,15 +147,61 @@ def process_url(url):
         logger.error(f"Error processing URL: {str(e)}", exc_info=True)
         return {'error': str(e)}
 
+def process_canva_link(url):
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page()
+            page.goto(url)
+            
+            page.wait_for_selector('.view-wrapper', timeout=30000)
+            
+            slides = page.query_selector_all('.view-wrapper')
+            content = []
+            
+            for slide in slides:
+                slide_text = slide.inner_text()
+                content.append(slide_text)
+            
+            browser.close()
+        
+        with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_pdf:
+            temp_pdf_path = temp_pdf.name
+        
+        pdf = canvas.Canvas(temp_pdf_path, pagesize=letter)
+        pdf.setFont("Helvetica", 12)
+        
+        for i, slide_content in enumerate(content):
+            pdf.drawString(100, 750, f"Slide {i + 1}")
+            y = 720
+            for line in slide_content.split('\n'):
+                pdf.drawString(100, y, line)
+                y -= 20
+                if y < 50:
+                    pdf.showPage()
+                    y = 750
+            pdf.showPage()
+        
+        pdf.save()
+        
+        result = process_pdf(temp_pdf_path)
+        result['type'] = 'canva'
+        result['url'] = url
+        result['temp_file_path'] = temp_pdf_path
+        return result
+    except Exception as e:
+        logger.error(f"Error processing Canva link: {str(e)}", exc_info=True)
+        return {'error': str(e)}
+
 def convert_rtf_to_pdf(input_file, output_file):
     with open(input_file, 'r') as file:
         rtf_content = file.read()
-    
+
     plain_text = rtf_to_text(rtf_content)
-    
+
     pdf = canvas.Canvas(output_file, pagesize=letter)
     pdf.setFont("Helvetica", 12)
-    
+
     lines = plain_text.split('\n')
     y = 750
     for line in lines:
@@ -162,14 +210,14 @@ def convert_rtf_to_pdf(input_file, output_file):
         if y < 50:
             pdf.showPage()
             y = 750
-    
+
     pdf.save()
 
 def convert_docx_to_pdf(input_file, output_file):
     doc = Document(input_file)
     pdf = canvas.Canvas(output_file, pagesize=letter)
     pdf.setFont("Helvetica", 12)
-    
+
     y = 750
     for paragraph in doc.paragraphs:
         lines = paragraph.text.split('\n')
@@ -179,30 +227,47 @@ def convert_docx_to_pdf(input_file, output_file):
             if y < 50:
                 pdf.showPage()
                 y = 750
-    
+
     pdf.save()
 
 def convert_keynote_to_pdf(input_file, output_file):
     try:
-        kn = keynote_parser.parse(input_file)
-        
+        try:
+            import keynote_parser
+            kn = keynote_parser.Keynote(input_file)
+            slides = kn.slides
+        except (ImportError, AttributeError):
+            slides = extract_text_from_keynote(input_file)
+
         pdf = canvas.Canvas(output_file, pagesize=letter)
         pdf.setFont("Helvetica", 12)
 
-        for i, slide in enumerate(kn.slides):
+        for i, slide_content in enumerate(slides):
             pdf.drawString(100, 750, f"Slide {i + 1}")
             y = 720
-            for text_box in slide.text_boxes:
-                for paragraph in text_box.paragraphs:
-                    for text_item in paragraph.text_elements:
-                        pdf.drawString(100, y, text_item.text)
-                        y -= 20
-                        if y < 50:
-                            pdf.showPage()
-                            y = 750
+            for line in slide_content.split('\n'):
+                pdf.drawString(100, y, line)
+                y -= 20
+                if y < 50:
+                    pdf.showPage()
+                    y = 750
             pdf.showPage()
 
         pdf.save()
     except Exception as e:
         logger.error(f"Error converting Keynote to PDF: {str(e)}", exc_info=True)
         raise
+
+def extract_text_from_keynote(keynote_file):
+    slides = []
+    with zipfile.ZipFile(keynote_file, 'r') as zip_ref:
+        for filename in zip_ref.namelist():
+            if filename.startswith('Data/Slide') and filename.endswith('.apxl'):
+                with zip_ref.open(filename) as file:
+                    tree = ET.parse(file)
+                    root = tree.getroot()
+                    slide_content = ""
+                    for text_elem in root.iter('{http://developer.apple.com/namespaces/keynote2}text'):
+                        slide_content += text_elem.text + "\n" if text_elem.text else ""
+                    slides.append(slide_content)
+    return slides

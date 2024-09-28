@@ -9,13 +9,15 @@
 <body>
     <div class="container">
         <h1>AI Slide Deck Validator</h1>
-        <p>Upload your slide deck for validation or provide a Canva or Google Slides URL. Supported file types:</p>
+        <p>Upload your slide deck for validation or provide a Canva, Google Slides, or Figma URL. Supported file types:</p>
         <ul>
             <li>PDF (.pdf)</li>
             <li>PowerPoint (.pptx)</li>
             <li>LibreOffice Presentation (.odp)</li>
+            <li>Keynote (.key)</li>
             <li>Canva presentation URL</li>
             <li>Google Slides URL</li>
+            <li>Figma URL (coming soon)</li>
         </ul>
         <form method="POST" enctype="multipart/form-data">
             {{ form.hidden_tag() }}
