@@ -10,7 +10,9 @@ from urllib.parse import urlparse, parse_qs
 import tempfile
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
-import io
+import re
+from io import BytesIO
+from PyPDF2 import PdfReader
 import markdown
 from weasyprint import HTML, CSS
 from weasyprint.text.fonts import FontConfiguration
@@ -28,19 +30,24 @@ from google.oauth2 import service_account
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
+
 def process_file(input_data):
     logger.debug(f"Starting to process input: {input_data}")
     try:
-        if isinstance(input_data, str) and (input_data.startswith('http://') or input_data.startswith('https://')):
+        if isinstance(input_data, str) and (input_data.startswith('http://') or
+                                            input_data.startswith('https://')):
             return process_url(input_data)
         else:
             file_type = magic.from_file(input_data, mime=True)
-            if file_type == 'application/zip' and input_data.lower().endswith('.otp'):
+            if file_type == 'application/zip' and input_data.lower().endswith(
+                    '.otp'):
                 file_type = 'application/vnd.oasis.opendocument.presentation'
-            elif file_type == 'application/zip' and input_data.lower().endswith('.key'):
+            elif file_type == 'application/zip' and input_data.lower(
+            ).endswith('.key'):
                 file_type = 'application/x-iwork-keynote-sffkey'
 
-            with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_pdf:
+            with tempfile.NamedTemporaryFile(suffix='.pdf',
+                                             delete=False) as temp_pdf:
                 temp_pdf_path = temp_pdf.name
 
             if file_type == 'application/pdf':
@@ -48,7 +55,10 @@ def process_file(input_data):
             elif file_type == 'application/vnd.openxmlformats-officedocument.presentationml.presentation':
                 convert_to_pdf(input_data, temp_pdf_path)
                 result = process_pdf(temp_pdf_path)
-            elif file_type in ['application/vnd.oasis.opendocument.presentation', 'application/x-openoffice-presentation']:
+            elif file_type in [
+                    'application/vnd.oasis.opendocument.presentation',
+                    'application/x-openoffice-presentation'
+            ]:
                 convert_odf_to_pdf(input_data, temp_pdf_path)
                 result = process_pdf(temp_pdf_path)
             elif file_type == 'text/markdown':
@@ -72,6 +82,7 @@ def process_file(input_data):
         logger.error(f"Error in process_file: {str(e)}", exc_info=True)
         return {'error': str(e)}
 
+
 def process_pdf(pdf_path):
     try:
         doc = fitz.open(pdf_path)
@@ -85,6 +96,7 @@ def process_pdf(pdf_path):
         logger.error(f"Error processing PDF: {str(e)}", exc_info=True)
         return {'error': f"Failed to process PDF: {str(e)}"}
 
+
 def convert_to_pdf(input_file, output_file):
     prs = Presentation(input_file)
     pdf = canvas.Canvas(output_file, pagesize=letter)
@@ -93,9 +105,11 @@ def convert_to_pdf(input_file, output_file):
         pdf.drawString(100, 700, f"Slide {prs.slides.index(slide) + 1}")
         for shape in slide.shapes:
             if hasattr(shape, 'text'):
-                pdf.drawString(100, 680 - 20 * slide.shapes.index(shape), shape.text)
+                pdf.drawString(100, 680 - 20 * slide.shapes.index(shape),
+                               shape.text)
         pdf.showPage()
     pdf.save()
+
 
 def convert_odf_to_pdf(input_file, output_file):
     doc = load(input_file)
@@ -112,12 +126,14 @@ def convert_odf_to_pdf(input_file, output_file):
             y = 750
     pdf.save()
 
+
 def convert_markdown_to_pdf(input_file, output_file):
     with open(input_file, 'r') as f:
         markdown_text = f.read()
     html = markdown.markdown(markdown_text)
     font_config = FontConfiguration()
     HTML(string=html).write_pdf(output_file, font_config=font_config)
+
 
 def process_url(url):
     try:
@@ -128,11 +144,12 @@ def process_url(url):
             return process_figma_link(url)
         elif 'docs.google.com' in parsed_url.netloc and 'presentation' in parsed_url.path:
             return process_google_slides(url)
-        
+
         return process_generic_url(url)
     except Exception as e:
         logger.error(f"Error processing URL: {str(e)}", exc_info=True)
         return {'error': str(e)}
+
 
 def process_generic_url(url):
     try:
@@ -140,7 +157,8 @@ def process_generic_url(url):
         soup = BeautifulSoup(response.text, 'html.parser')
         content = soup.get_text()
 
-        with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_pdf:
+        with tempfile.NamedTemporaryFile(suffix='.pdf',
+                                         delete=False) as temp_pdf:
             temp_pdf_path = temp_pdf.name
 
         font_config = FontConfiguration()
@@ -155,18 +173,20 @@ def process_generic_url(url):
         logger.error(f"Error in generic URL processing: {str(e)}")
         return {'error': str(e)}
 
+
 def process_canva_link(url):
     try:
         response = requests.get(url)
         soup = BeautifulSoup(response.text, 'html.parser')
         content = soup.get_text()
 
-        with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_pdf:
+        with tempfile.NamedTemporaryFile(suffix='.pdf',
+                                         delete=False) as temp_pdf:
             temp_pdf_path = temp_pdf.name
 
         pdf = canvas.Canvas(temp_pdf_path, pagesize=letter)
         pdf.setFont("Helvetica", 12)
-        
+
         lines = content.split('\n')
         y = 750
         for line in lines:
@@ -186,18 +206,20 @@ def process_canva_link(url):
         logger.error(f"Error processing Canva link: {str(e)}", exc_info=True)
         return {'error': str(e)}
 
+
 def process_figma_link(url):
     try:
         response = requests.get(url)
         soup = BeautifulSoup(response.text, 'html.parser')
         content = soup.get_text()
 
-        with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_pdf:
+        with tempfile.NamedTemporaryFile(suffix='.pdf',
+                                         delete=False) as temp_pdf:
             temp_pdf_path = temp_pdf.name
 
         pdf = canvas.Canvas(temp_pdf_path, pagesize=letter)
         pdf.setFont("Helvetica", 12)
-        
+
         lines = content.split('\n')
         y = 750
         for line in lines:
@@ -216,6 +238,7 @@ def process_figma_link(url):
     except Exception as e:
         logger.error(f"Error processing Figma link: {str(e)}", exc_info=True)
         return {'error': str(e)}
+
 
 def convert_rtf_to_pdf(input_file, output_file):
     with open(input_file, 'r') as file:
@@ -237,6 +260,7 @@ def convert_rtf_to_pdf(input_file, output_file):
 
     pdf.save()
 
+
 def convert_docx_to_pdf(input_file, output_file):
     doc = Document(input_file)
     pdf = canvas.Canvas(output_file, pagesize=letter)
@@ -253,6 +277,7 @@ def convert_docx_to_pdf(input_file, output_file):
                 y = 750
 
     pdf.save()
+
 
 def convert_keynote_to_pdf(input_file, output_file):
     try:
@@ -279,76 +304,57 @@ def convert_keynote_to_pdf(input_file, output_file):
 
         pdf.save()
     except Exception as e:
-        logger.error(f"Error converting Keynote to PDF: {str(e)}", exc_info=True)
+        logger.error(f"Error converting Keynote to PDF: {str(e)}",
+                     exc_info=True)
         raise
+
 
 def extract_text_from_keynote(keynote_file):
     slides = []
     with zipfile.ZipFile(keynote_file, 'r') as zip_ref:
         for filename in zip_ref.namelist():
-            if filename.startswith('Data/Slide') and filename.endswith('.apxl'):
+            if filename.startswith('Data/Slide') and filename.endswith(
+                    '.apxl'):
                 with zip_ref.open(filename) as file:
                     tree = ET.parse(file)
                     root = tree.getroot()
                     slide_content = ""
-                    for text_elem in root.iter('{http://developer.apple.com/namespaces/keynote2}text'):
+                    for text_elem in root.iter(
+                            '{http://developer.apple.com/namespaces/keynote2}text'
+                    ):
                         slide_content += text_elem.text + "\n" if text_elem.text else ""
                     slides.append(slide_content)
     return slides
 
+
 def process_google_slides(url):
-    try:
-        parsed_url = urlparse(url)
-        presentation_id = parsed_url.path.split('/')[-2]
+    # Extract presentation ID from URL
+    match = re.search('/d/([a-zA-Z0-9-_]+)', url)
+    if not match:
+        raise ValueError("Invalid Google Slides URL")
+    presentation_id = match.group(1)
 
-        creds = None
-        if os.path.exists('google_service_account.json'):
-            creds = service_account.Credentials.from_service_account_file(
-                'google_service_account.json',
-                scopes=['https://www.googleapis.com/auth/presentations.readonly']
-            )
-        else:
-            raise FileNotFoundError("Google service account JSON file not found.")
+    # Construct the export URL
+    export_url = f"https://docs.google.com/presentation/d/{presentation_id}/export/pdf"
 
-        service = build('slides', 'v1', credentials=creds)
+    # Download the PDF
+    response = requests.get(export_url)
+    if response.status_code != 200:
+        raise Exception(
+            "Failed to download the presentation. Make sure it's public and the URL is correct."
+        )
 
-        presentation = service.presentations().get(presentationId=presentation_id).execute()
-        slides = presentation.get('slides', [])
+    # Read the PDF content
+    pdf_content = BytesIO(response.content)
+    pdf_reader = PdfReader(pdf_content)
 
-        content = []
-        for slide in slides:
-            slide_content = ""
-            for element in slide.get('pageElements', []):
-                if 'shape' in element and 'text' in element['shape']:
-                    for textElement in element['shape']['text'].get('textElements', []):
-                        if 'textRun' in textElement:
-                            slide_content += textElement['textRun'].get('content', '')
-            content.append(slide_content.strip())
+    # Extract text from each page (slide)
+    content = []
+    for page in pdf_reader.pages:
+        content.append(page.extract_text().strip())
 
-        with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_pdf:
-            temp_pdf_path = temp_pdf.name
-
-        pdf = canvas.Canvas(temp_pdf_path, pagesize=letter)
-        pdf.setFont("Helvetica", 12)
-        
-        for i, slide_content in enumerate(content):
-            pdf.drawString(100, 750, f"Slide {i + 1}")
-            y = 720
-            for line in slide_content.split('\n'):
-                pdf.drawString(100, y, line)
-                y -= 20
-                if y < 50:
-                    pdf.showPage()
-                    y = 750
-            pdf.showPage()
-        pdf.save()
-
-        result = process_pdf(temp_pdf_path)
-        result['type'] = 'google_slides'
-        result['url'] = url
-        result['temp_file_path'] = temp_pdf_path
-        return result
-
-    except Exception as e:
-        logger.error(f"Error processing Google Slides: {str(e)}", exc_info=True)
-        return {'error': str(e)}
+    return {
+        'type': 'google_slides',
+        'num_slides': len(pdf_reader.pages),
+        'content': content
+    }
