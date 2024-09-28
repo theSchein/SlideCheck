@@ -9,7 +9,7 @@ def run_deterministic_checks(slide_data, conference):
     file_type = slide_data['type']
     results.append({
         'check': 'File type',
-        'passed': file_type in ['pdf', 'powerpoint', 'libreoffice', 'canva', 'google_slides'],
+        'passed': file_type in ['pdf', 'powerpoint', 'libreoffice', 'canva', 'google_slides', 'keynote'],
         'message': f'File type is {file_type}.'
     })
 
@@ -69,6 +69,10 @@ def run_deterministic_checks(slide_data, conference):
     # Add the image presence check
     results.append(check_image_presence(slide_data))
 
+    # Add Keynote-specific checks if needed
+    if file_type == 'keynote':
+        results.append(check_keynote_specific_features(slide_data))
+
     return results
 
 def check_image_presence(slide_data):
@@ -78,7 +82,7 @@ def check_image_presence(slide_data):
 
     if file_type == 'pdf' and file_path:
         return check_for_images_pdf(file_path)
-    elif file_type in ['canva', 'google_slides']:
+    elif file_type in ['canva', 'google_slides', 'keynote']:
         return {
             'check': 'Image Presence',
             'passed': True,
@@ -161,4 +165,11 @@ def check_statistical_terms(text, threshold):
         'check': 'Statistical Terms',
         'passed': has_stat_terms,
         'message': f'The presentation includes {len(found_terms)} statistical term(s): {", ".join(found_terms)}. Threshold: {threshold}.'
+    }
+
+def check_keynote_specific_features(slide_data):
+    return {
+        'check': 'Keynote Features',
+        'passed': True,
+        'message': 'Keynote file processed successfully. No specific Keynote checks implemented yet.'
     }

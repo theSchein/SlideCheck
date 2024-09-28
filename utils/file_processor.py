@@ -22,6 +22,7 @@ import requests
 from playwright.sync_api import sync_playwright
 from docx import Document
 from striprtf.striprtf import rtf_to_text
+from keynote_parser import keynote_file
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -35,6 +36,8 @@ def process_file(input_data):
             file_type = magic.from_file(input_data, mime=True)
             if file_type == 'application/zip' and input_data.lower().endswith('.otp'):
                 file_type = 'application/vnd.oasis.opendocument.presentation'
+            elif file_type == 'application/zip' and input_data.lower().endswith('.key'):
+                file_type = 'application/x-iwork-keynote-sffkey'
             
             with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_pdf:
                 temp_pdf_path = temp_pdf.name
@@ -55,6 +58,9 @@ def process_file(input_data):
                 result = process_pdf(temp_pdf_path)
             elif file_type == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
                 convert_docx_to_pdf(input_data, temp_pdf_path)
+                result = process_pdf(temp_pdf_path)
+            elif file_type == 'application/x-iwork-keynote-sffkey':
+                convert_keynote_to_pdf(input_data, temp_pdf_path)
                 result = process_pdf(temp_pdf_path)
             else:
                 raise ValueError(f"Unsupported file type: {file_type}")
@@ -175,3 +181,28 @@ def convert_docx_to_pdf(input_file, output_file):
                 y = 750
     
     pdf.save()
+
+def convert_keynote_to_pdf(input_file, output_file):
+    try:
+        kn = keynote_file.Keynote(input_file)
+        
+        pdf = canvas.Canvas(output_file, pagesize=letter)
+        pdf.setFont("Helvetica", 12)
+
+        for i, slide in enumerate(kn.slides):
+            pdf.drawString(100, 750, f"Slide {i + 1}")
+            y = 720
+            for text_box in slide.text_boxes:
+                for paragraph in text_box.paragraphs:
+                    for text_item in paragraph.text_elements:
+                        pdf.drawString(100, y, text_item.text)
+                        y -= 20
+                        if y < 50:
+                            pdf.showPage()
+                            y = 750
+            pdf.showPage()
+
+        pdf.save()
+    except Exception as e:
+        logger.error(f"Error converting Keynote to PDF: {str(e)}", exc_info=True)
+        raise

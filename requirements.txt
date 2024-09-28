@@ -18,3 +18,4 @@ markdown==3.5.2
 weasyprint==61.1
 playwright==1.42.0
 uno-py==0.1.34
+keynote-parser==1.1.1
