@@ -22,7 +22,7 @@ import requests
 from playwright.sync_api import sync_playwright
 from docx import Document
 from striprtf.striprtf import rtf_to_text
-from keynote_parser import keynote_file
+from keynote_parser import Keynote
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -184,7 +184,7 @@ def convert_docx_to_pdf(input_file, output_file):
 
 def convert_keynote_to_pdf(input_file, output_file):
     try:
-        kn = keynote_file.Keynote(input_file)
+        kn = Keynote(input_file)
         
         pdf = canvas.Canvas(output_file, pagesize=letter)
         pdf.setFont("Helvetica", 12)

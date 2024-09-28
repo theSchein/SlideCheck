@@ -1,11 +1,11 @@
 import os
 from utils.file_processor import process_file
 import tempfile
-from keynote_parser import keynote_file
+from keynote_parser import Keynote
 
 def create_sample_keynote():
     # Create a simple Keynote file programmatically
-    kn = keynote_file.Keynote()
+    kn = Keynote()
     slide = kn.add_slide()
     text_box = slide.add_text_box()
     paragraph = text_box.add_paragraph()
