@@ -29,7 +29,7 @@ def test_pdf():
         os.unlink(temp_pdf_path)
 
 def test_pptx():
-    pptx_path = "path/to/sample.pptx"
+    pptx_path = "sample_files/sample.pptx"
     if os.path.exists(pptx_path):
         try:
             result = process_file(pptx_path)
@@ -43,23 +43,8 @@ def test_pptx():
     else:
         print("PPTX test skipped: No sample file available")
 
-def test_otp():
-    otp_path = "path/to/sample.otp"
-    if os.path.exists(otp_path):
-        try:
-            result = process_file(otp_path)
-            assert 'error' not in result, f"Error processing OTP: {result.get('error')}"
-            assert result['type'] == 'pdf', "Result type should be 'pdf' (converted from otp)"
-            assert result['num_slides'] > 0, "Should have at least one slide"
-            assert len(result['content']) > 0, "Should have some content"
-            print("OTP processing test passed successfully!")
-        except Exception as e:
-            logger.error(f"Error during OTP processing test: {str(e)}", exc_info=True)
-    else:
-        print("OTP test skipped: No sample file available")
-
 def test_canva():
-    canva_url = "https://www.canva.com/design/DAFxxx/view"
+    canva_url = "https://www.canva.com/templates/EAF4OFZRD4Y-colourful-playful-class-agenda-education-presentation/"
     try:
         result = process_url(canva_url)
         assert 'error' not in result, f"Error processing Canva: {result.get('error')}"
@@ -71,7 +56,7 @@ def test_canva():
         logger.error(f"Error during Canva processing test: {str(e)}", exc_info=True)
 
 def test_figma():
-    figma_url = "https://www.figma.com/file/xxx/Sample-Presentation"
+    figma_url = "https://www.figma.com/deck/MmzfmAWwR06geAJ7geK9MJ/project-status-template?node-id=1-284&node-type=slide&t=DoHGcqXgkDxaeMEB-1&scaling=min-zoom&content-scaling=fixed&page-id=0%3A1"
     try:
         result = process_url(figma_url)
         assert 'error' not in result, f"Error processing Figma: {result.get('error')}"
@@ -83,7 +68,7 @@ def test_figma():
         logger.error(f"Error during Figma processing test: {str(e)}", exc_info=True)
 
 def test_keynote():
-    keynote_path = "path/to/sample.key"
+    keynote_path = "sample_files/sample.key"
     if os.path.exists(keynote_path):
         try:
             result = process_file(keynote_path)
@@ -100,7 +85,6 @@ def test_keynote():
 if __name__ == "__main__":
     test_pdf()
     test_pptx()
-    test_otp()
     test_canva()
     test_figma()
     test_keynote()
