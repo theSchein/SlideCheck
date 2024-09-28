@@ -1,5 +1,5 @@
 import magic
-import fitz 
+import fitz
 import logging
 from pptx import Presentation
 from odf import text, teletype
@@ -31,6 +31,9 @@ def process_file(input_data):
             return process_url(input_data)
         else:
             file_type = magic.from_file(input_data, mime=True)
+            if file_type == 'application/zip' and input_data.lower().endswith('.odp'):
+                file_type = 'application/vnd.oasis.opendocument.presentation'
+            
             with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_pdf:
                 temp_pdf_path = temp_pdf.name
 
@@ -53,5 +56,18 @@ def process_file(input_data):
     except Exception as e:
         logger.error(f"Error in process_file: {str(e)}", exc_info=True)
         return {'error': str(e)}
+
+def process_pdf(pdf_path):
+    doc = fitz.open(pdf_path)
+    num_pages = len(doc)
+    content = []
+    for page in doc:
+        content.append(page.get_text())
+    doc.close()
+    return {
+        'type': 'pdf',
+        'num_slides': num_pages,
+        'content': content
+    }
 
 # Rest of the file remains unchanged
