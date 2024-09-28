@@ -1,5 +1,11 @@
 {pkgs}: {
   deps = [
+    pkgs.playwright-driver
+    pkgs.gitFull
+    pkgs.pango
+    pkgs.glib
+    pkgs.ghostscript
+    pkgs.fontconfig
     pkgs.poppler_utils
     pkgs.glibcLocales
     pkgs.xcbuild
