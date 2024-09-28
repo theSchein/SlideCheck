@@ -121,6 +121,8 @@ def process_url(url):
         parsed_url = urlparse(url)
         if 'canva.com' in parsed_url.netloc:
             return process_canva_link(url)
+        elif 'figma.com' in parsed_url.netloc:
+            return process_figma_link(url)
         
         with sync_playwright() as p:
             browser = p.chromium.launch()
@@ -191,6 +193,52 @@ def process_canva_link(url):
         return result
     except Exception as e:
         logger.error(f"Error processing Canva link: {str(e)}", exc_info=True)
+        return {'error': str(e)}
+
+def process_figma_link(url):
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page()
+            page.goto(url)
+            
+            page.wait_for_selector('.view-wrapper', timeout=30000)
+            
+            slides = page.query_selector_all('.view-wrapper')
+            content = []
+            
+            for slide in slides:
+                slide_text = slide.inner_text()
+                content.append(slide_text)
+            
+            browser.close()
+        
+        with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_pdf:
+            temp_pdf_path = temp_pdf.name
+        
+        pdf = canvas.Canvas(temp_pdf_path, pagesize=letter)
+        pdf.setFont("Helvetica", 12)
+        
+        for i, slide_content in enumerate(content):
+            pdf.drawString(100, 750, f"Slide {i + 1}")
+            y = 720
+            for line in slide_content.split('\n'):
+                pdf.drawString(100, y, line)
+                y -= 20
+                if y < 50:
+                    pdf.showPage()
+                    y = 750
+            pdf.showPage()
+        
+        pdf.save()
+        
+        result = process_pdf(temp_pdf_path)
+        result['type'] = 'figma'
+        result['url'] = url
+        result['temp_file_path'] = temp_pdf_path
+        return result
+    except Exception as e:
+        logger.error(f"Error processing Figma link: {str(e)}", exc_info=True)
         return {'error': str(e)}
 
 def convert_rtf_to_pdf(input_file, output_file):
