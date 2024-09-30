@@ -3,40 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Slide Deck Validator</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <title>SlideChecker - URL Processor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
     <div class="container">
-        <h1>AI Slide Deck Validator</h1>
-        <p>Upload your slide deck for validation or provide a Canva or Figma URL. Supported file types and formats:</p>
-        <ul>
-            <li>PDF (.pdf)</li>
-            <li>PowerPoint (.pptx)</li>
-            <li>LibreOffice Presentation (.odp)</li>
-            <li>Keynote (.key)</li>
-            <li>Canva presentation URL</li>
-            <li>Figma presentation URL</li>
-        </ul>
-        <form method="POST" enctype="multipart/form-data">
-            {{ form.hidden_tag() }}
-            {{ form.csrf_token }}
-            <div>
-                {{ form.file.label }}
-                {{ form.file() }}
-            </div>
-            <div>
-                {{ form.url.label }}
-                {{ form.url() }}
-            </div>
-            <div>
-                {{ form.conference.label }}
-                {{ form.conference() }}
-            </div>
-            {{ form.submit() }}
+        <h1>SlideChecker - URL Processor</h1>
+        <form id="urlForm">
+            <input type="text" id="urlInput" placeholder="Enter Canva or Figma URL" required>
+            <button type="submit">Process URL</button>
         </form>
-        <div id="results"></div>
+        <div id="result"></div>
     </div>
-    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script>
+        document.getElementById('urlForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const url = document.getElementById('urlInput').value;
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Processing...';
+
+            try {
+                const response = await fetch('/process', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ url }),
+                });
+
+                const data = await response.json();
+                if (data.error) {
+                    resultDiv.innerHTML = `Error: ${data.error}`;
+                } else {
+                    resultDiv.innerHTML = `
+                        <h2>Results:</h2>
+                        <p>Type: ${data.type}</p>
+                        <p>Original Type: ${data.original_type}</p>
+                        <p>Number of Slides: ${data.num_slides}</p>
+                        <p>Fonts: ${data.fonts.join(', ')}</p>
+                        <p>Temporary File Path: ${data.temp_file_path}</p>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `Error: ${error.message}`;
+            }
+        });
+    </script>
 </body>
 </html>

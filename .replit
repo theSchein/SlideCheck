@@ -19,6 +19,10 @@ args = "Start Flask Server"
 task = "workflow.run"
 args = "Run New Test Suite"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Start Flask App"
+
 [[workflows.workflow]]
 name = "Start Flask Server"
 author = "agent"
@@ -37,6 +41,18 @@ agentRequireRestartOnSave = false
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python -m tests.test_file_processing && python -m tests.test_deterministic_checks"
+
+[[workflows.workflow]]
+name = "Start Flask App"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python main.py"
+waitForPort = 5000
 # args = "python -m tests.test_deterministic_checks"
 
 [deployment]
