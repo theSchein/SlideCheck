@@ -1,5 +1,6 @@
 {pkgs}: {
   deps = [
+    pkgs.htop-vim
     pkgs.playwright-driver
     pkgs.gitFull
     pkgs.pango
