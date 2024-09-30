@@ -8,8 +8,9 @@ from unittest.runner import TextTestResult
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils.file_processor import (process_file, process_pdf, convert_to_pdf,
-                                  convert_keynote_to_pdf, process_markdown,
-                                  process_url, process_generic_url,
+                                  convert_keynote_to_pdf,
+                                  convert_markdown_to_pdf, process_url,
+                                  process_figma, process_canva,
                                   process_google_slides)
 
 
@@ -48,6 +49,17 @@ class TestSlideshowChecker(unittest.TestCase):
     def setUp(self):
         self.sample_data_dir = os.path.join(
             os.path.dirname(os.path.abspath(__file__)), "sample_data")
+        self.urls_file = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "sample_data/slideshowURLs.txt")
+        with open(self.urls_file, 'r') as f:
+            self.urls = [line.strip() for line in f.readlines()]
+
+    def save_processed_data(self, file_name, data):
+        output_file = os.path.join(self.processed_data_dir,
+                                   f"{file_name}.json")
+        with open(output_file, 'w') as f:
+            json.dump(data, f)
 
     def test_process_file_pdf(self):
         pdf_path = os.path.join(self.sample_data_dir, "sample.pdf")
@@ -55,6 +67,8 @@ class TestSlideshowChecker(unittest.TestCase):
         self.assertIsInstance(result, dict, "Result should be a dictionary")
         self.assertEqual(result['type'], 'application/pdf',
                          "Type should be 'application/pdf'")
+        self.assertEqual(result['original_type'], 'application/pdf',
+                         "Original type should be 'application/pdf'")
         self.assertIn('num_slides', result,
                       "Result should contain 'num_slides'")
         self.assertIn('content', result, "Result should contain 'content'")
@@ -64,10 +78,12 @@ class TestSlideshowChecker(unittest.TestCase):
         pptx_path = os.path.join(self.sample_data_dir, "sample.pptx")
         result = process_file(pptx_path)
         self.assertIsInstance(result, dict, "Result should be a dictionary")
+        self.assertEqual(result['type'], 'application/pdf',
+                         "Type should be 'application/pdf'")
         self.assertEqual(
-            result['type'],
+            result['original_type'],
             'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-            "Type should be 'application/vnd.openxmlformats-officedocument.presentationml.presentation'"
+            "Original type should be 'application/vnd.openxmlformats-officedocument.presentationml.presentation'"
         )
         self.assertIn('num_slides', result,
                       "Result should contain 'num_slides'")
@@ -77,32 +93,29 @@ class TestSlideshowChecker(unittest.TestCase):
         self.assertIn('audio_tracks', result,
                       "Result should contain 'audio_tracks'")
 
-    def test_process_file_markdown(self):
+    def test_process_markdown(self):
         md_path = os.path.join(self.sample_data_dir, "sample.md")
         result = process_file(md_path)
         self.assertIsInstance(result, dict, "Result should be a dictionary")
-        self.assertEqual(result['type'], 'markdown',
-                         "Type should be 'markdown'")
+        self.assertEqual(result['type'], 'application/pdf',
+                         "Type should be 'application/pdf'")
+        self.assertEqual(result['original_type'], 'markdown',
+                         "Original type should be 'markdown'")
         self.assertIn('num_slides', result,
                       "Result should contain 'num_slides'")
         self.assertIn('content', result, "Result should contain 'content'")
+        self.assertIn('temp_file_path', result,
+                      "Result should contain 'temp_file_path'")
 
     def test_process_file_keynote(self):
         keynote_path = os.path.join(self.sample_data_dir, "sample.key")
         result = process_file(keynote_path)
         self.assertIsInstance(result, dict, "Result should be a dictionary")
+        self.assertEqual(result['type'], 'application/pdf',
+                         "Type should be 'application/pdf'")
         self.assertEqual(
-            result['type'], 'application/x-iwork-keynote-sffkey',
-            "Type should be 'application/x-iwork-keynote-sffkey'")
-        self.assertIn('num_slides', result,
-                      "Result should contain 'num_slides'")
-        self.assertIn('content', result, "Result should contain 'content'")
-
-    def test_process_file_url(self):
-        url = "https://docs.google.com/presentation/d/your_presentation_id/edit"
-        result = process_file(url)
-        self.assertIsInstance(result, dict, "Result should be a dictionary")
-        self.assertIn('type', result, "Result should contain 'type'")
+            result['original_type'], 'application/x-iwork-keynote-sffkey',
+            "Original type should be 'application/x-iwork-keynote-sffkey'")
         self.assertIn('num_slides', result,
                       "Result should contain 'num_slides'")
         self.assertIn('content', result, "Result should contain 'content'")
@@ -133,41 +146,71 @@ class TestSlideshowChecker(unittest.TestCase):
 
     def test_process_markdown(self):
         md_path = os.path.join(self.sample_data_dir, "sample.md")
-        result = process_markdown(md_path)
+        result = convert_markdown_to_pdf(md_path)
         self.assertIsInstance(result, dict, "Result should be a dictionary")
         self.assertEqual(result['type'], 'markdown',
                          "Type should be 'markdown'")
         self.assertIn('num_slides', result,
                       "Result should contain 'num_slides'")
         self.assertIn('content', result, "Result should contain 'content'")
+        self.assertIn('temp_file_path', result,
+                      "Result should contain 'temp_file_path'")
 
     def test_process_url(self):
-        url = "https://www.figma.com/slides/MmzfmAWwR06geAJ7geK9MJ/project-status-template?node-id=1-284&t=PeJnht7wqhLLHMI4-1"
-        result = process_url(url)
-        self.assertIsInstance(result, dict, "Result should be a dictionary")
-        self.assertIn('type', result, "Result should contain 'type'")
-        self.assertIn('num_slides', result,
-                      "Result should contain 'num_slides'")
-        self.assertIn('content', result, "Result should contain 'content'")
+        for url in self.urls:
+            result = process_url(url)
+            self.assertIsInstance(result, dict,
+                                  "Result should be a dictionary")
+            self.assertEqual(result['type'], 'application/pdf',
+                             "Type should be 'application/pdf'")
+            self.assertIn('original_type', result,
+                          "Result should contain 'original_type'")
+            self.assertIn('url', result, "Result should contain 'url'")
+            self.assertIn('temp_file_path', result,
+                          "Result should contain 'temp_file_path'")
+            self.assertIn('num_slides', result,
+                          "Result should contain 'num_slides'")
+            self.assertIn('content', result, "Result should contain 'content'")
 
-    def test_process_generic_url(self):
-        url = "https://www.canva.com/templates/EAF4OFZRD4Y-colourful-playful-class-agenda-education-presentation/"
-        result = process_generic_url(url)
+    def test_process_figma(self):
+        figma_url = next(url for url in self.urls if 'figma.com' in url)
+        result = process_figma(figma_url)
         self.assertIsInstance(result, dict, "Result should be a dictionary")
-        self.assertEqual(result['type'], 'url', "Type should be 'url'")
+        self.assertEqual(result['type'], 'application/pdf',
+                         "Type should be 'application/pdf'")
+        self.assertEqual(result['original_type'], 'figma',
+                         "Original type should be 'figma'")
+        self.assertIn('url', result, "Result should contain 'url'")
+        self.assertIn('temp_file_path', result,
+                      "Result should contain 'temp_file_path'")
+
+    def test_process_canva(self):
+        canva_url = next(url for url in self.urls if 'canva.com' in url)
+        result = process_canva(canva_url)
+        self.assertIsInstance(result, dict, "Result should be a dictionary")
+        self.assertEqual(result['type'], 'application/pdf',
+                         "Type should be 'application/pdf'")
+        self.assertEqual(result['original_type'], 'canva',
+                         "Original type should be 'canva'")
         self.assertIn('url', result, "Result should contain 'url'")
         self.assertIn('temp_file_path', result,
                       "Result should contain 'temp_file_path'")
 
     def test_process_google_slides(self):
-        url = "https://docs.google.com/presentation/d/1tmpHzm716sAOKtunRpPOhRc0TgCX_Y2-_AnjMmKrY8A/edit?usp=sharing"
-        result = process_google_slides(url)
+        google_slides_url = next(url for url in self.urls
+                                 if 'docs.google.com' in url)
+        result = process_google_slides(google_slides_url)
         self.assertIsInstance(result, dict, "Result should be a dictionary")
-        self.assertEqual(result['type'], 'google_slides',
-                         "Type should be 'google_slides'")
+        self.assertEqual(result['type'], 'application/pdf',
+                         "Type should be 'application/pdf'")
+        self.assertEqual(result['original_type'], 'google_slides',
+                         "Original type should be 'google_slides'")
         self.assertIn('num_slides', result,
                       "Result should contain 'num_slides'")
         self.assertIn('content', result, "Result should contain 'content'")
+        self.assertIn('url', result, "Result should contain 'url'")
+        self.assertIn('temp_file_path', result,
+                      "Result should contain 'temp_file_path'")
 
 
 if __name__ == "__main__":

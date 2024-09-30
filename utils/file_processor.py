@@ -34,13 +34,14 @@ def process_file(input_data):
         else:
             file_type = magic.from_file(input_data, mime=True)
             file_extension = os.path.splitext(input_data)[1].lower()
-
             logger.debug(
                 f"Detected file type: {file_type}, File extension: {file_extension}"
             )
 
-            # Handle cases where magic returns application/octet-stream
-            if file_type == 'application/octet-stream':
+            # Handle cases where magic returns application/octet-stream, text/plain, or application/zip
+            if file_type in [
+                    'application/octet-stream', 'text/plain', 'application/zip'
+            ]:
                 if file_extension == '.pptx':
                     file_type = 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
                 elif file_extension == '.key':
@@ -48,36 +49,37 @@ def process_file(input_data):
                 elif file_extension == '.md':
                     file_type = 'text/markdown'
 
-            result = None
             temp_pdf_path = None
             video_tracks = []
             audio_tracks = []
+            original_type = file_type
 
             if file_type == 'application/pdf':
-                result = process_pdf(input_data)
+                temp_pdf_path = input_data
             elif file_type == 'application/vnd.openxmlformats-officedocument.presentationml.presentation':
                 temp_pdf_path, video_tracks, audio_tracks = convert_to_pdf(
                     input_data)
-                result = process_pdf(temp_pdf_path)
             elif file_type == 'text/markdown' or file_extension == '.md':
-                result = process_markdown(input_data)
+                temp_pdf_path = convert_markdown_to_pdf(input_data)
+                original_type = 'markdown'
             elif file_type == 'application/x-iwork-keynote-sffkey' or file_extension == '.key':
                 temp_pdf_path = convert_keynote_to_pdf(input_data)
-                result = process_pdf(temp_pdf_path)
             else:
                 raise ValueError(f"Unsupported file type: {file_type}")
 
+            result = process_pdf(temp_pdf_path)
+
             if result:
                 result.update({
-                    'type': file_type,
-                    'temp_file_path': temp_pdf_path or input_data,
+                    'original_type': original_type,
+                    'type': 'application/pdf',
+                    'temp_file_path': temp_pdf_path,
                     'video_tracks': video_tracks,
                     'audio_tracks': audio_tracks
                 })
                 return result
             else:
                 raise ValueError("Processing failed to produce a result")
-
     except Exception as e:
         logger.error(f"Error in process_file: {str(e)}", exc_info=True)
         return {'error': str(e), 'type': 'unknown'}
@@ -161,31 +163,6 @@ def convert_to_pdf(input_file):
         raise
 
 
-def convert_rtf_to_pdf(input_file):
-    with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_pdf:
-        output_file = temp_pdf.name
-
-    with open(input_file, 'r') as file:
-        rtf_content = file.read()
-
-    plain_text = rtf_to_text(rtf_content)
-
-    pdf = canvas.Canvas(output_file, pagesize=letter)
-    pdf.setFont("Helvetica", 12)
-
-    lines = plain_text.split('\n')
-    y = 750
-    for line in lines:
-        pdf.drawString(50, y, line)
-        y -= 14
-        if y < 50:
-            pdf.showPage()
-            y = 750
-
-    pdf.save()
-    return output_file
-
-
 def convert_keynote_to_pdf(input_file):
     with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_pdf:
         output_file = temp_pdf.name
@@ -233,7 +210,7 @@ def extract_text_from_keynote(keynote_file):
     return slides
 
 
-def process_markdown(markdown_path):
+def convert_markdown_to_pdf(markdown_path):
     try:
         with open(markdown_path, 'r', encoding='utf-8') as md_file:
             md_content = md_file.read()
@@ -247,16 +224,11 @@ def process_markdown(markdown_path):
         font_config = FontConfiguration()
         HTML(string=html).write_pdf(temp_pdf_path, font_config=font_config)
 
-        result = process_pdf(temp_pdf_path)
-        result['type'] = 'text/markdown'
-        result['temp_file_path'] = temp_pdf_path
-        return result
+        return temp_pdf_path  # Return the path to the PDF file
     except Exception as e:
-        logger.error(f"Error processing Markdown: {str(e)}", exc_info=True)
-        return {
-            'error': f"Failed to process Markdown: {str(e)}",
-            'type': 'text/markdown'
-        }
+        logger.error(f"Error converting Markdown to PDF: {str(e)}",
+                     exc_info=True)
+        raise
 
 
 def process_url(url):
@@ -264,22 +236,38 @@ def process_url(url):
         parsed_url = urlparse(url)
         if 'docs.google.com' in parsed_url.netloc and 'presentation' in parsed_url.path:
             return process_google_slides(url)
-
-        return process_generic_url(url)
+        elif 'figma.com' in parsed_url.netloc:
+            return process_figma(url)
+        elif 'canva.com' in parsed_url.netloc:
+            return process_canva(url)
+        else:
+            raise ValueError("Unsupported URL type")
     except Exception as e:
         logger.error(f"Error processing URL: {str(e)}", exc_info=True)
-        return {'error': str(e), 'type': 'url'}
+        return {'error': str(e), 'type': 'unknown', 'url': url}
 
 
 def process_figma(url):
     try:
-        # Here you would implement the logic to process Figma URLs
-        # For now, we'll just return a placeholder result
-        return {
-            'type': 'figma',
+        response = requests.get(url)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        content = soup.get_text()
+
+        with tempfile.NamedTemporaryFile(suffix='.pdf',
+                                         delete=False) as temp_pdf:
+            temp_pdf_path = temp_pdf.name
+
+        font_config = FontConfiguration()
+        HTML(string=content).write_pdf(temp_pdf_path, font_config=font_config)
+
+        result = process_pdf(temp_pdf_path)
+        result.update({
+            'original_type': 'figma',
+            'type': 'application/pdf',
             'url': url,
-            'message': 'Figma processing not yet implemented'
-        }
+            'temp_file_path': temp_pdf_path
+        })
+        return result
     except Exception as e:
         logger.error(f"Error processing Figma URL: {str(e)}", exc_info=True)
         return {'error': str(e), 'type': 'figma'}
@@ -287,13 +275,25 @@ def process_figma(url):
 
 def process_canva(url):
     try:
-        # Here you would implement the logic to process Canva URLs
-        # For now, we'll just return a placeholder result
-        return {
-            'type': 'canva',
+        response = requests.get(url)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        content = soup.get_text()
+
+        with tempfile.NamedTemporaryFile(suffix='.pdf',
+                                         delete=False) as temp_pdf:
+            temp_pdf_path = temp_pdf.name
+
+        font_config = FontConfiguration()
+        HTML(string=content).write_pdf(temp_pdf_path, font_config=font_config)
+
+        result = process_pdf(temp_pdf_path)
+        result.update({
+            'original_type': 'canva',
+            'type': 'application/pdf',
             'url': url,
-            'message': 'Canva processing not yet implemented'
-        }
+            'temp_file_path': temp_pdf_path,
+        })
+        return result
     except Exception as e:
         logger.error(f"Error processing Canva URL: {str(e)}", exc_info=True)
         return {'error': str(e), 'type': 'canva'}
@@ -317,47 +317,24 @@ def process_google_slides(url):
                 "Failed to download the presentation. Make sure it's public and the URL is correct."
             )
 
-        # Read the PDF content
-        pdf_content = BytesIO(response.content)
-        pdf_reader = PdfReader(pdf_content)
-
-        # Extract text from each page (slide)
-        content = []
-        for page in pdf_reader.pages:
-            content.append(page.extract_text().strip())
-
-        return {
-            'type': 'google_slides',
-            'num_slides': len(pdf_reader.pages),
-            'content': content
-        }
-    except Exception as e:
-        logger.error(f"Error processing Google Slides: {str(e)}",
-                     exc_info=True)
-        return {'error': str(e), 'type': 'google_slides'}
-
-
-def process_generic_url(url):
-    try:
-        response = requests.get(url)
-        soup = BeautifulSoup(response.text, 'html.parser')
-        content = soup.get_text()
-
+        # Save the PDF content to a temporary file
         with tempfile.NamedTemporaryFile(suffix='.pdf',
                                          delete=False) as temp_pdf:
             temp_pdf_path = temp_pdf.name
-
-        font_config = FontConfiguration()
-        HTML(string=content).write_pdf(temp_pdf_path, font_config=font_config)
+            temp_pdf.write(response.content)
 
         result = process_pdf(temp_pdf_path)
-        result['type'] = 'url'
-        result['url'] = url
-        result['temp_file_path'] = temp_pdf_path
+        result.update({
+            'original_type': 'google_slides',
+            'type': 'application/pdf',
+            'url': url,
+            'temp_file_path': temp_pdf_path
+        })
         return result
     except Exception as e:
-        logger.error(f"Error in generic URL processing: {str(e)}")
-        return {'error': str(e), 'type': 'url'}
+        logger.error(f"Error processing Google Slides: {str(e)}",
+                     exc_info=True)
+        return {'error': str(e), 'type': 'google_slides', 'url': url}
 
 
 # Main execution
