@@ -1,6 +1,6 @@
 import os
 from flask import Flask, request, jsonify, render_template
-from utils.url_processor import process_url
+from utils.file_processor import process_url
 
 app = Flask(__name__)
 
