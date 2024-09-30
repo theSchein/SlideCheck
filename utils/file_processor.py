@@ -45,6 +45,8 @@ def process_file(input_data):
                     file_type = 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
                 elif file_extension == '.key':
                     file_type = 'application/x-iwork-keynote-sffkey'
+                elif file_extension == '.md':
+                    file_type = 'text/markdown'
 
             result = None
             temp_pdf_path = None
@@ -54,17 +56,12 @@ def process_file(input_data):
             if file_type == 'application/pdf':
                 result = process_pdf(input_data)
             elif file_type == 'application/vnd.openxmlformats-officedocument.presentationml.presentation':
-                temp_pdf_path, video_tracks, audio_tracks = convert_to_pdf(input_data)
+                temp_pdf_path, video_tracks, audio_tracks = convert_to_pdf(
+                    input_data)
                 result = process_pdf(temp_pdf_path)
-            elif file_type == 'text/markdown':
+            elif file_type == 'text/markdown' or file_extension == '.md':
                 result = process_markdown(input_data)
-            elif file_type == 'application/rtf':
-                temp_pdf_path = convert_rtf_to_pdf(input_data)
-                result = process_pdf(temp_pdf_path)
-            elif file_type == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
-                temp_pdf_path = convert_docx_to_pdf(input_data)
-                result = process_pdf(temp_pdf_path)
-            elif file_type == 'application/x-iwork-keynote-sffkey':
+            elif file_type == 'application/x-iwork-keynote-sffkey' or file_extension == '.key':
                 temp_pdf_path = convert_keynote_to_pdf(input_data)
                 result = process_pdf(temp_pdf_path)
             else:
@@ -83,7 +80,7 @@ def process_file(input_data):
 
     except Exception as e:
         logger.error(f"Error in process_file: {str(e)}", exc_info=True)
-        return {'error': str(e)}
+        return {'error': str(e), 'type': 'unknown'}
 
 
 def process_pdf(pdf_path):
@@ -113,6 +110,7 @@ def process_pdf(pdf_path):
         logger.error(f"Error processing PDF: {str(e)}", exc_info=True)
         return {'error': f"Failed to process PDF: {str(e)}"}
 
+
 def convert_to_pdf(input_file):
     with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_pdf:
         output_file = temp_pdf.name
@@ -133,16 +131,20 @@ def convert_to_pdf(input_file):
                     text_frame = shape.text_frame
                     for paragraph in text_frame.paragraphs:
                         text = paragraph.text
-                        pdf.drawString(100, y_position, text[:80])  # Limit text to 80 chars
+                        pdf.drawString(100, y_position,
+                                       text[:80])  # Limit text to 80 chars
                         y_position -= 20
                 elif shape.shape_type == MSO_SHAPE_TYPE.MEDIA:
-                    if hasattr(shape, 'media_format') and hasattr(shape.media_format, 'mime_type'):
+                    if hasattr(shape, 'media_format') and hasattr(
+                            shape.media_format, 'mime_type'):
                         mime_type = shape.media_format.mime_type
                         if mime_type.startswith('video'):
-                            video_tracks.append(f"Video on slide {slide_index + 1}")
+                            video_tracks.append(
+                                f"Video on slide {slide_index + 1}")
                             pdf.drawString(100, y_position, "[Video]")
                         elif mime_type.startswith('audio'):
-                            audio_tracks.append(f"Audio on slide {slide_index + 1}")
+                            audio_tracks.append(
+                                f"Audio on slide {slide_index + 1}")
                             pdf.drawString(100, y_position, "[Audio]")
                     y_position -= 20
 
@@ -154,7 +156,8 @@ def convert_to_pdf(input_file):
         logger.debug(f"Successfully converted {input_file} to PDF")
         return output_file, video_tracks, audio_tracks
     except Exception as e:
-        logger.error(f"Error converting {input_file} to PDF: {str(e)}", exc_info=True)
+        logger.error(f"Error converting {input_file} to PDF: {str(e)}",
+                     exc_info=True)
         raise
 
 
@@ -178,28 +181,6 @@ def convert_rtf_to_pdf(input_file):
         if y < 50:
             pdf.showPage()
             y = 750
-
-    pdf.save()
-    return output_file
-
-
-def convert_docx_to_pdf(input_file):
-    with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_pdf:
-        output_file = temp_pdf.name
-
-    doc = Document(input_file)
-    pdf = canvas.Canvas(output_file, pagesize=letter)
-    pdf.setFont("Helvetica", 12)
-
-    y = 750
-    for paragraph in doc.paragraphs:
-        lines = paragraph.text.split('\n')
-        for line in lines:
-            pdf.drawString(50, y, line)
-            y -= 14
-            if y < 50:
-                pdf.showPage()
-                y = 750
 
     pdf.save()
     return output_file
@@ -267,12 +248,15 @@ def process_markdown(markdown_path):
         HTML(string=html).write_pdf(temp_pdf_path, font_config=font_config)
 
         result = process_pdf(temp_pdf_path)
-        result['type'] = 'markdown'
+        result['type'] = 'text/markdown'
         result['temp_file_path'] = temp_pdf_path
         return result
     except Exception as e:
         logger.error(f"Error processing Markdown: {str(e)}", exc_info=True)
-        return {'error': f"Failed to process Markdown: {str(e)}"}
+        return {
+            'error': f"Failed to process Markdown: {str(e)}",
+            'type': 'text/markdown'
+        }
 
 
 def process_url(url):
@@ -284,7 +268,73 @@ def process_url(url):
         return process_generic_url(url)
     except Exception as e:
         logger.error(f"Error processing URL: {str(e)}", exc_info=True)
-        return {'error': str(e)}
+        return {'error': str(e), 'type': 'url'}
+
+
+def process_figma(url):
+    try:
+        # Here you would implement the logic to process Figma URLs
+        # For now, we'll just return a placeholder result
+        return {
+            'type': 'figma',
+            'url': url,
+            'message': 'Figma processing not yet implemented'
+        }
+    except Exception as e:
+        logger.error(f"Error processing Figma URL: {str(e)}", exc_info=True)
+        return {'error': str(e), 'type': 'figma'}
+
+
+def process_canva(url):
+    try:
+        # Here you would implement the logic to process Canva URLs
+        # For now, we'll just return a placeholder result
+        return {
+            'type': 'canva',
+            'url': url,
+            'message': 'Canva processing not yet implemented'
+        }
+    except Exception as e:
+        logger.error(f"Error processing Canva URL: {str(e)}", exc_info=True)
+        return {'error': str(e), 'type': 'canva'}
+
+
+def process_google_slides(url):
+    try:
+        # Extract presentation ID from URL
+        match = re.search('/d/([a-zA-Z0-9-_]+)', url)
+        if not match:
+            raise ValueError("Invalid Google Slides URL")
+        presentation_id = match.group(1)
+
+        # Construct the export URL
+        export_url = f"https://docs.google.com/presentation/d/{presentation_id}/export/pdf"
+
+        # Download the PDF
+        response = requests.get(export_url)
+        if response.status_code != 200:
+            raise Exception(
+                "Failed to download the presentation. Make sure it's public and the URL is correct."
+            )
+
+        # Read the PDF content
+        pdf_content = BytesIO(response.content)
+        pdf_reader = PdfReader(pdf_content)
+
+        # Extract text from each page (slide)
+        content = []
+        for page in pdf_reader.pages:
+            content.append(page.extract_text().strip())
+
+        return {
+            'type': 'google_slides',
+            'num_slides': len(pdf_reader.pages),
+            'content': content
+        }
+    except Exception as e:
+        logger.error(f"Error processing Google Slides: {str(e)}",
+                     exc_info=True)
+        return {'error': str(e), 'type': 'google_slides'}
 
 
 def process_generic_url(url):
@@ -307,40 +357,7 @@ def process_generic_url(url):
         return result
     except Exception as e:
         logger.error(f"Error in generic URL processing: {str(e)}")
-        return {'error': str(e)}
-
-
-def process_google_slides(url):
-    # Extract presentation ID from URL
-    match = re.search('/d/([a-zA-Z0-9-_]+)', url)
-    if not match:
-        raise ValueError("Invalid Google Slides URL")
-    presentation_id = match.group(1)
-
-    # Construct the export URL
-    export_url = f"https://docs.google.com/presentation/d/{presentation_id}/export/pdf"
-
-    # Download the PDF
-    response = requests.get(export_url)
-    if response.status_code != 200:
-        raise Exception(
-            "Failed to download the presentation. Make sure it's public and the URL is correct."
-        )
-
-    # Read the PDF content
-    pdf_content = BytesIO(response.content)
-    pdf_reader = PdfReader(pdf_content)
-
-    # Extract text from each page (slide)
-    content = []
-    for page in pdf_reader.pages:
-        content.append(page.extract_text().strip())
-
-    return {
-        'type': 'google_slides',
-        'num_slides': len(pdf_reader.pages),
-        'content': content
-    }
+        return {'error': str(e), 'type': 'url'}
 
 
 # Main execution

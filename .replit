@@ -17,90 +17,26 @@ args = "Start Flask Server"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Run Keynote Test"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Run Canva Test"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Run Canva and Figma Tests"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Run All Format Tests"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Run Google Slides Test"
+args = "Run New Test Suite"
 
 [[workflows.workflow]]
 name = "Start Flask Server"
 author = "agent"
-
 [workflows.workflow.metadata]
 agentRequireRestartOnSave = false
-
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python main.py"
 waitForPort = 5000
 
 [[workflows.workflow]]
-name = "Run Keynote Test"
+name = "Run New Test Suite"
 author = "agent"
-
 [workflows.workflow.metadata]
 agentRequireRestartOnSave = false
-
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python test_keynote_processor.py"
-
-[[workflows.workflow]]
-name = "Run Canva Test"
-author = "agent"
-
-[workflows.workflow.metadata]
-agentRequireRestartOnSave = false
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python test_canva_processor.py"
-
-[[workflows.workflow]]
-name = "Run Canva and Figma Tests"
-author = "agent"
-
-[workflows.workflow.metadata]
-agentRequireRestartOnSave = false
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python test_canva_figma_processor.py"
-
-[[workflows.workflow]]
-name = "Run All Format Tests"
-author = "agent"
-
-[workflows.workflow.metadata]
-agentRequireRestartOnSave = false
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python test_all_formats.py"
-
-[[workflows.workflow]]
-name = "Run Google Slides Test"
-author = "agent"
-
-[workflows.workflow.metadata]
-agentRequireRestartOnSave = false
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python test_google_slides_processor.py"
+args = "python -m tests.test_file_processing"
 
 [deployment]
 run = ["sh", "-c", "python main.py"]
