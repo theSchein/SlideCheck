@@ -1,0 +1,24 @@
+.ERROR:utils.file_processor:Error processing Canva URL: 403 Client Error: Forbidden for url: https://www.canva.com/design/DAGQ8XI3Opc/ipntsMsQ9NW_AU2mFraoQg/view?utm_content=DAGQ8XI3Opc&utm_campaign=designshare&utm_medium=link&utm_source=editorhttps://www.canva.com/design/DAGQ8XI3Opc/ipntsMsQ9NW_AU2mFraoQg/view?utm_content=DAGQ8XI3Opc&utm_campaign=designshare&utm_medium=link&utm_source=editor
+Traceback (most recent call last):
+  File "/home/runner/SlideChecker/utils/file_processor.py", line 281, in process_canva
+    response.raise_for_status()
+  File "/nix/store/nicjg1xpimrn3zfbndwix25gphv88zlx-python3.11-requests-2.31.0/lib/python3.11/site-packages/requests/models.py", line 1021, in raise_for_status
+    raise HTTPError(http_error_msg, response=self)
+requests.exceptions.HTTPError: 403 Client Error: Forbidden for url: https://www.canva.com/design/DAGQ8XI3Opc/ipntsMsQ9NW_AU2mFraoQg/view?utm_content=DAGQ8XI3Opc&utm_campaign=designshare&utm_medium=link&utm_source=editorhttps://www.canva.com/design/DAGQ8XI3Opc/ipntsMsQ9NW_AU2mFraoQg/view?utm_content=DAGQ8XI3Opc&utm_campaign=designshare&utm_medium=link&utm_source=editor
+FERROR:utils.file_processor:Error processing Figma URL: 403 Client Error: Forbidden for url: https://www.figma.com/slides/MmzfmAWwR06geAJ7geK9MJ/project-status-template?node-id=1-284&t=PeJnht7wqhLLHMI4-1
+Traceback (most recent call last):
+  File "/home/runner/SlideChecker/utils/file_processor.py", line 256, in process_figma
+    response.raise_for_status()
+  File "/nix/store/nicjg1xpimrn3zfbndwix25gphv88zlx-python3.11-requests-2.31.0/lib/python3.11/site-packages/requests/models.py", line 1021, in raise_for_status
+    raise HTTPError(http_error_msg, response=self)
+requests.exceptions.HTTPError: 403 Client Error: Forbidden for url: https://www.figma.com/slides/MmzfmAWwR06geAJ7geK9MJ/project-status-template?node-id=1-284&t=PeJnht7wqhLLHMI4-1
+F..../home/runner/SlideChecker/.pythonlibs/lib/python3.11/site-packages/pydyf/__init__.py:404: DeprecationWarning: transform is deprecated, use set_matrix instead.
+  warn(Stream.transform.__doc__, DeprecationWarning)
+/home/runner/SlideChecker/.pythonlibs/lib/python3.11/site-packages/pydyf/__init__.py:399: DeprecationWarning: text_matrix is deprecated, use set_text_matrix instead.
+  warn(Stream.text_matrix.__doc__, DeprecationWarning)
+..ERROR:utils.file_processor:Error processing Canva URL: 403 Client Error: Forbidden for url: https://www.canva.com/design/DAGQ8XI3Opc/ipntsMsQ9NW_AU2mFraoQg/view?utm_content=DAGQ8XI3Opc&utm_campaign=designshare&utm_medium=link&utm_source=editorhttps://www.canva.com/design/DAGQ8XI3Opc/ipntsMsQ9NW_AU2mFraoQg/view?utm_content=DAGQ8XI3Opc&utm_campaign=designshare&utm_medium=link&utm_source=editor
+Traceback (most recent call last):
+  File "/home/runner/SlideChecker/utils/file_processor.py", line 281, in process_canva
+    response.raise_for_status()
+  File "/nix/store/nicjg1xpimrn3zfbndwix25gphv88zlx-python3.11-requests-2.31.0/lib/python3.11/site-packages/requests/models.py", line 1021, in raise_for_status
+    raise HTTPError(http_error_msg, response=self)

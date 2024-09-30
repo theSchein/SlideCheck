@@ -1,5 +1,7 @@
 {pkgs}: {
   deps = [
+    pkgs.python311Packages.webdriver-manager
+    pkgs.geckodriver
     pkgs.htop-vim
     pkgs.playwright-driver
     pkgs.gitFull

@@ -36,7 +36,8 @@ author = "agent"
 agentRequireRestartOnSave = false
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python -m tests.test_file_processing"
+args = "python -m tests.test_file_processing && python -m tests.test_deterministic_checks"
+# args = "python -m tests.test_deterministic_checks"
 
 [deployment]
 run = ["sh", "-c", "python main.py"]
@@ -44,3 +45,4 @@ run = ["sh", "-c", "python main.py"]
 [[ports]]
 localPort = 5000
 externalPort = 80
+
